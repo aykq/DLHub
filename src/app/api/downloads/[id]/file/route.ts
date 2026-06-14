@@ -1,0 +1,137 @@
+import { auth } from "@/lib/auth";
+import { db } from "@/db";
+import { downloads } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { verifyDownloadToken } from "@/lib/download-token";
+import { createReadStream } from "fs";
+import { stat } from "fs/promises";
+import path from "path";
+import { type NextRequest } from "next/server";
+
+const CHUNK_SIZE = 100 * 1024 * 1024; // 100 MB — Cloudflare uyumlu
+
+function nodeStreamToWeb(nodeStream: ReturnType<typeof createReadStream>): ReadableStream {
+  return new ReadableStream({
+    start(controller) {
+      nodeStream.on("data", (chunk) => controller.enqueue(chunk));
+      nodeStream.on("end", () => controller.close());
+      nodeStream.on("error", (err) => controller.error(err));
+    },
+    cancel() {
+      nodeStream.destroy();
+    },
+  });
+}
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) return new Response("Unauthorized", { status: 401 });
+
+  const { id } = await params;
+
+  const token = req.nextUrl.searchParams.get("token");
+  if (!token) return new Response("Token gerekli", { status: 400 });
+
+  const verified = verifyDownloadToken(token);
+  if (!verified || verified.downloadId !== id) {
+    return new Response("Geçersiz veya süresi dolmuş link", { status: 401 });
+  }
+
+  const download = await db.query.downloads.findFirst({
+    where: eq(downloads.id, id),
+    columns: { userId: true, status: true, filePath: true, title: true, format: true },
+  });
+
+  if (!download || download.status !== "completed" || !download.filePath) {
+    return new Response("Dosya bulunamadı", { status: 404 });
+  }
+
+  if (download.userId !== session.user.id) {
+    return new Response("Yetkisiz", { status: 403 });
+  }
+
+  let fileStat: Awaited<ReturnType<typeof stat>>;
+  try {
+    fileStat = await stat(download.filePath);
+  } catch {
+    return new Response("Dosya artık mevcut değil", { status: 410 });
+  }
+
+  const fileSize = fileStat.size;
+  const ext = path.extname(download.filePath) || ".mp4";
+  const safeTitle = (download.title ?? "download")
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, "")
+    .trim()
+    .slice(0, 100) || "download";
+  const downloadFilename = `${safeTitle}${ext}`;
+  const encodedFilename = encodeURIComponent(downloadFilename);
+
+  const contentDisposition =
+    `attachment; filename="${downloadFilename}"; filename*=UTF-8''${encodedFilename}`;
+
+  const rangeHeader = req.headers.get("range");
+
+  if (rangeHeader) {
+    const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+    if (!match) return new Response("Range geçersiz", { status: 416 });
+
+    const start = parseInt(match[1], 10);
+    const requestedEnd = match[2] ? parseInt(match[2], 10) : undefined;
+    const end = Math.min(
+      start + CHUNK_SIZE - 1,
+      fileSize - 1,
+      requestedEnd ?? fileSize - 1
+    );
+
+    if (start >= fileSize) {
+      return new Response(null, {
+        status: 416,
+        headers: { "Content-Range": `bytes */${fileSize}` },
+      });
+    }
+
+    const chunkSize = end - start + 1;
+    const fileStream = createReadStream(download.filePath, { start, end });
+
+    return new Response(nodeStreamToWeb(fileStream), {
+      status: 206,
+      headers: {
+        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": chunkSize.toString(),
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": contentDisposition,
+      },
+    });
+  }
+
+  // Range header yok — dosya 100MB'tan küçükse doğrudan gönder, büyükse ilk chunk
+  if (fileSize <= CHUNK_SIZE) {
+    const fileStream = createReadStream(download.filePath);
+    return new Response(nodeStreamToWeb(fileStream), {
+      status: 200,
+      headers: {
+        "Accept-Ranges": "bytes",
+        "Content-Length": fileSize.toString(),
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": contentDisposition,
+      },
+    });
+  }
+
+  const end = CHUNK_SIZE - 1;
+  const fileStream = createReadStream(download.filePath, { start: 0, end });
+  return new Response(nodeStreamToWeb(fileStream), {
+    status: 206,
+    headers: {
+      "Content-Range": `bytes 0-${end}/${fileSize}`,
+      "Accept-Ranges": "bytes",
+      "Content-Length": CHUNK_SIZE.toString(),
+      "Content-Type": "application/octet-stream",
+      "Content-Disposition": contentDisposition,
+    },
+  });
+}

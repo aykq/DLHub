@@ -12,6 +12,7 @@
     "db:studio": "drizzle-kit studio",
     "db:migrate": "drizzle-kit migrate",
     "docker:db": "docker compose --env-file .env.local up -d db",
+    "docker:services": "docker compose --env-file .env.local up -d db metube",
     "docker:down": "docker compose --env-file .env.local down"
   },
   "dependencies": {
