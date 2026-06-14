@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { downloads, users } from "@/db/schema";
 import { eq, desc, or } from "drizzle-orm";
-import { getDownloadFormat } from "@/lib/formats";
+import { parseFormatId } from "@/lib/formats";
 import { metubeAdd } from "@/lib/metube";
 import { type NextRequest } from "next/server";
 
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Geçerli bir URL girin" }, { status: 400 });
   }
 
-  const fmt = formatId ? getDownloadFormat(formatId) : undefined;
+  const fmt = formatId ? parseFormatId(formatId) : null;
   if (!fmt) {
     return Response.json({ error: "Geçersiz format seçimi" }, { status: 400 });
   }
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   const [record] = await db
     .insert(downloads)
-    .values({ userId: session.user.id, url, format: fmt.id, status: "pending" })
+    .values({ userId: session.user.id, url, format: formatId!, status: "pending" })
     .returning({ id: downloads.id });
 
   const namePrefix = `${record.id}_`;
