@@ -44,7 +44,7 @@ export async function sendSignInDiscordNotification(data: NewUserNotificationDat
 
   if (data.isNewUser) {
     const token = createApprovalToken(data.userId);
-    const approvalUrl = `${appUrl}/admin/users?approve=${token}`;
+    const approvalUrl = `${appUrl}/admin/approve?token=${token}`;
 
     await sendWebhook({
       embeds: [
