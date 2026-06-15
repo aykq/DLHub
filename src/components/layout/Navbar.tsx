@@ -38,7 +38,7 @@ export async function Navbar({ maxWidth = "max-w-3xl", extraActions }: NavbarPro
           {isAdmin && (
             <Link
               href="/admin"
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-md hover:bg-muted"
+              className="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-md hover:bg-muted"
             >
               <ShieldCheck className="size-3.5" />
               {t("admin")}
@@ -57,8 +57,8 @@ export async function Navbar({ maxWidth = "max-w-3xl", extraActions }: NavbarPro
                 type="submit"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-md hover:bg-muted cursor-pointer"
               >
-                {session.user.name?.split(" ")[0] ?? session.user.email}
-                <span className="text-muted-foreground/60 ml-1.5">{t("signOut")}</span>
+                <span className="hidden sm:inline">{session.user.name?.split(" ")[0] ?? session.user.email}</span>
+                <span className="text-muted-foreground/60 sm:ml-1.5">{t("signOut")}</span>
               </button>
             </form>
           )}

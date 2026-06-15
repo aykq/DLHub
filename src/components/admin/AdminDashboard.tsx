@@ -19,6 +19,9 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export interface AdminUser {
   id: string;
@@ -73,14 +76,16 @@ function fmtBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
 
-function timeAgo(dateStr: string): string {
+type TFn = ReturnType<typeof useTranslations<"admin">>;
+
+function timeAgo(dateStr: string, t: TFn): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "az önce";
-  if (m < 60) return `${m}dk`;
+  if (m < 1) return t("timeNow");
+  if (m < 60) return t("timeMin", { count: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}s`;
-  return `${Math.floor(h / 24)}g`;
+  if (h < 24) return t("timeHour", { count: h });
+  return t("timeDay", { count: Math.floor(h / 24) });
 }
 
 function formatLabel(id: string): string {
@@ -101,6 +106,7 @@ function hostOf(url: string): string {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const t = useTranslations("admin");
   const map: Record<string, string> = {
     pending: "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400",
     approved: "bg-green-500/15 text-green-600 dark:text-green-400",
@@ -111,13 +117,13 @@ function StatusBadge({ status }: { status: string }) {
     expired: "bg-muted text-muted-foreground",
   };
   const labels: Record<string, string> = {
-    pending: "Bekliyor",
-    approved: "Onaylı",
-    blocked: "Engelli",
-    downloading: "İndiriliyor",
-    completed: "Tamamlandı",
-    error: "Hata",
-    expired: "Süresi Doldu",
+    pending: t("statusPending"),
+    approved: t("statusApproved"),
+    blocked: t("statusBlocked"),
+    downloading: t("statusDownloading"),
+    completed: t("statusCompleted"),
+    error: t("statusError"),
+    expired: t("statusExpired"),
   };
   return (
     <span
@@ -132,6 +138,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function AdminDashboard({ initialStats, initialUsers, initialDownloads, initialSettings }: Props) {
+  const t = useTranslations("admin");
   const [stats, setStats] = useState<AdminStats>(initialStats);
   const [users, setUsers] = useState<AdminUser[]>(initialUsers);
   const [dlList, setDlList] = useState<AdminDownload[]>(initialDownloads);
@@ -191,12 +198,12 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       const data = await res.json() as { ok?: boolean; expiredRemoved?: number; stuckReset?: number; errors?: string[]; error?: string };
       if (res.ok) {
         setCronResult(
-          `Temizlik tamamlandı — süresi dolan: ${data.expiredRemoved ?? 0}, takılı kalan: ${data.stuckReset ?? 0}` +
-            (data.errors?.length ? ` | Hatalar: ${data.errors.join(", ")}` : "")
+          t("cronDone", { expired: data.expiredRemoved ?? 0, stuck: data.stuckReset ?? 0 }) +
+            (data.errors?.length ? t("cronErrors", { errors: data.errors.join(", ") }) : "")
         );
         await refresh();
       } else {
-        setCronResult(`Hata: ${data.error ?? "bilinmeyen"}`);
+        setCronResult(t("cronError", { error: data.error ?? "unknown" }));
       }
     } finally {
       setItemLoading("cron", false);
@@ -227,7 +234,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
   }
 
   async function deleteUser(userId: string) {
-    if (!confirm("Bu kullanıcıyı silmek istediğinize emin misiniz?")) return;
+    if (!confirm(t("deleteUserConfirm"))) return;
     const key = `user-delete-${userId}`;
     setItemLoading(key, true);
     try {
@@ -242,7 +249,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
   }
 
   async function deleteDownload(dlId: string) {
-    if (!confirm("Bu indirmeyi iptal/silmek istediğinize emin misiniz?")) return;
+    if (!confirm(t("deleteDownloadConfirm"))) return;
     const key = `dl-delete-${dlId}`;
     setItemLoading(key, true);
     try {
@@ -264,8 +271,8 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold">Admin Paneli</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Sistem yönetimi</p>
+          <h1 className="text-xl font-bold">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{t("subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -280,7 +287,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
             ) : (
               <Clock className="size-3.5" />
             )}
-            Temizlik
+            {t("cleanup")}
           </Button>
           <Button
             variant="outline"
@@ -290,8 +297,10 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
             className="gap-1.5"
           >
             <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} />
-            Yenile
+            {t("refresh")}
           </Button>
+          <LanguageToggle />
+          <ThemeToggle />
         </div>
       </div>
 
@@ -305,23 +314,23 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard
           icon={<Users className="size-4" />}
-          label="Toplam Kullanıcı"
+          label={t("statUsers")}
           value={stats.totalUsers}
         />
         <StatCard
           icon={<Clock className="size-4 text-yellow-500" />}
-          label="Bekleyen"
+          label={t("statPending")}
           value={stats.pendingUsers}
           highlight={stats.pendingUsers > 0}
         />
         <StatCard
           icon={<Download className="size-4 text-blue-500" />}
-          label="Aktif İndirme"
+          label={t("statActive")}
           value={stats.activeDownloads}
         />
         <StatCard
           icon={<HardDrive className="size-4" />}
-          label="Disk Kullanımı"
+          label={t("statDisk")}
           value={stats.diskUsage !== null ? fmtBytes(stats.diskUsage) : "—"}
         />
       </div>
@@ -331,7 +340,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
         <section className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-5 space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-yellow-600 dark:text-yellow-400 flex items-center gap-1.5">
             <Clock className="size-3.5" />
-            Bekleyen Kullanıcılar ({pendingUsers.length})
+            {t("pendingSection")} ({pendingUsers.length})
           </h2>
           <ul className="space-y-2">
             {pendingUsers.map((u) => (
@@ -359,7 +368,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                     ) : (
                       <CheckCircle className="size-3.5" />
                     )}
-                    Onayla
+                    {t("approve")}
                   </Button>
                   <Button
                     size="sm"
@@ -373,7 +382,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                     ) : (
                       <XCircle className="size-3.5" />
                     )}
-                    Reddet
+                    {t("reject")}
                   </Button>
                 </div>
               </li>
@@ -386,10 +395,10 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       <section className="rounded-xl border border-border bg-card p-5 space-y-3">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
           <Users className="size-3.5" />
-          Tüm Kullanıcılar ({users.length})
+          {t("allUsers")} ({users.length})
         </h2>
         {users.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Kullanıcı yok</p>
+          <p className="text-sm text-muted-foreground">{t("noUsers")}</p>
         ) : (
           <ul className="space-y-1.5">
             {users.map((u) => (
@@ -414,7 +423,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                       variant="ghost"
                       onClick={() => updateUserStatus(u.id, "approved")}
                       disabled={!!loading[`user-${u.id}-approved`]}
-                      title="Onayla"
+                      title={t("approve")}
                     >
                       {loading[`user-${u.id}-approved`] ? (
                         <Loader2 className="size-3.5 animate-spin" />
@@ -429,7 +438,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                       variant="ghost"
                       onClick={() => updateUserStatus(u.id, "blocked")}
                       disabled={!!loading[`user-${u.id}-blocked`]}
-                      title="Engelle"
+                      title={t("titleBlock")}
                     >
                       {loading[`user-${u.id}-blocked`] ? (
                         <Loader2 className="size-3.5 animate-spin" />
@@ -444,7 +453,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                       variant="ghost"
                       onClick={() => updateUserStatus(u.id, "approved")}
                       disabled={!!loading[`user-${u.id}-approved`]}
-                      title="Engeli Kaldır"
+                      title={t("titleUnblock")}
                     >
                       {loading[`user-${u.id}-approved`] ? (
                         <Loader2 className="size-3.5 animate-spin" />
@@ -458,7 +467,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                     variant="ghost"
                     onClick={() => deleteUser(u.id)}
                     disabled={!!loading[`user-delete-${u.id}`]}
-                    title="Sil"
+                    title={t("titleDelete")}
                   >
                     {loading[`user-delete-${u.id}`] ? (
                       <Loader2 className="size-3.5 animate-spin" />
@@ -478,11 +487,11 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
         <section className="rounded-xl border border-border bg-card p-5 space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
             <BarChart2 className="size-3.5" />
-            İstatistikler
+            {t("statsSection")}
           </h2>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Toplam indirilen</span>
+              <span className="text-muted-foreground">{t("totalDownloaded")}</span>
               <span className="font-medium">{fmtBytes(stats.totalDownloadedBytes)}</span>
             </div>
             {stats.platformStats.length > 0 && (
@@ -512,10 +521,10 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       <section className="rounded-xl border border-border bg-card p-5 space-y-3">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
           <Download className="size-3.5" />
-          İndirmeler ({dlList.length})
+          {t("downloadsSection")} ({dlList.length})
         </h2>
         {dlList.length === 0 ? (
-          <p className="text-sm text-muted-foreground">İndirme yok</p>
+          <p className="text-sm text-muted-foreground">{t("noDownloads")}</p>
         ) : (
           <ul className="space-y-1.5">
             {dlList.map((dl) => {
@@ -544,7 +553,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                         </>
                       )}
                       <span className="opacity-40">·</span>
-                      <span>{timeAgo(dl.createdAt)}</span>
+                      <span>{timeAgo(dl.createdAt, t)}</span>
                     </p>
                     {dl.status === "error" && dl.errorMessage && (
                       <p className="text-xs text-destructive mt-1 flex items-center gap-1">
@@ -565,7 +574,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                         variant="ghost"
                         onClick={() => deleteDownload(dl.id)}
                         disabled={!!loading[`dl-delete-${dl.id}`]}
-                        title={isActive ? "İptal Et" : "Sil"}
+                        title={isActive ? t("titleCancel") : t("titleDelete")}
                       >
                         {loading[`dl-delete-${dl.id}`] ? (
                           <Loader2 className="size-3.5 animate-spin" />
@@ -586,12 +595,12 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       <section className="rounded-xl border border-border bg-card p-5 space-y-4">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
           <Settings className="size-3.5" />
-          Ayarlar
+          {t("settingsSection")}
         </h2>
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              Günlük indirme limiti (kullanıcı başına, 0 = sınırsız)
+              {t("dailyLimitLabel")}
             </label>
             <Input
               type="number"
@@ -605,7 +614,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              İzin verilen domainler (virgülle ayır, boş = hepsi)
+              {t("whitelistLabel")}
             </label>
             <Input
               placeholder="youtube.com, twitter.com, tiktok.com"
@@ -618,12 +627,12 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
           </div>
           <div className="flex items-center gap-3">
             <Button size="sm" onClick={saveSettings} disabled={settingsSaving}>
-              {settingsSaving ? <Loader2 className="size-3.5 animate-spin" /> : "Kaydet"}
+              {settingsSaving ? <Loader2 className="size-3.5 animate-spin" /> : t("save")}
             </Button>
             {settingsSaved && (
               <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
                 <CheckCircle className="size-3.5" />
-                Kaydedildi
+                {t("saved")}
               </span>
             )}
           </div>
