@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { users, downloads, settings } from "@/db/schema";
 import { desc, asc, eq, or } from "drizzle-orm";
 import { AdminDashboard, type AdminUser, type AdminDownload, type AdminStats } from "@/components/admin/AdminDashboard";
+import { PageTransitionWrapper } from "@/components/layout/PageTransitionWrapper";
 import { readdir, stat } from "fs/promises";
 import path from "path";
 
@@ -91,6 +92,7 @@ export default async function AdminPage() {
 
   return (
     <main className="flex-1 w-full">
+      <PageTransitionWrapper>
       <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
         <AdminDashboard
           initialStats={stats}
@@ -102,6 +104,7 @@ export default async function AdminPage() {
           }}
         />
       </div>
+      </PageTransitionWrapper>
     </main>
   );
 }

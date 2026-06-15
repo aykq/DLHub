@@ -7,6 +7,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { DownloadForm } from "@/components/download/DownloadForm";
 import { DownloadHistory, type DownloadRecord } from "@/components/download/DownloadHistory";
 import { StatusMonitor } from "@/components/StatusMonitor";
+import { PageTransitionWrapper } from "@/components/layout/PageTransitionWrapper";
 import { createDownloadToken } from "@/lib/download-token";
 
 export default async function HomePage() {
@@ -54,13 +55,15 @@ export default async function HomePage() {
       <Navbar />
       <StatusMonitor />
       <main className="flex-1 w-full">
-        <div className="mx-auto max-w-3xl px-4 py-8 space-y-4">
-          <DownloadForm
-            activeDownloadId={activeDownload?.id ?? null}
-            activeDownloadTitle={activeDownload?.title ?? null}
-          />
-          <DownloadHistory initialDownloads={initialDownloads} />
-        </div>
+        <PageTransitionWrapper>
+          <div className="mx-auto max-w-3xl px-4 py-8 space-y-4">
+            <DownloadForm
+              activeDownloadId={activeDownload?.id ?? null}
+              activeDownloadTitle={activeDownload?.title ?? null}
+            />
+            <DownloadHistory initialDownloads={initialDownloads} />
+          </div>
+        </PageTransitionWrapper>
       </main>
     </>
   );

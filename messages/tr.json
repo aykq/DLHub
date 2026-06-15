@@ -1,0 +1,75 @@
+{
+  "login": {
+    "title": "DLHub",
+    "subtitle": "Video indirme platformu",
+    "googleSignIn": "Google ile Giriş Yap",
+    "or": "veya",
+    "sendMagicLink": "Magic Link Gönder",
+    "emailPlaceholder": "E-posta adresiniz",
+    "linkSent": "Giriş linki gönderildi",
+    "checkEmail": "{email} adresini kontrol edin",
+    "awaitingApproval": "Onay bekleniyor...",
+    "redirecting": "Yönlendiriliyorsunuz",
+    "errors": {
+      "accessDenied": "Hesabınız engellenmiş. Erişim için yönetici ile iletişime geçin.",
+      "verification": "Giriş bağlantısının süresi dolmuş. Lütfen yeniden magic link gönderin.",
+      "generic": "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.",
+      "blocked": "Bu hesaba erişim engellendi.",
+      "rateLimited": "Çok fazla deneme. Lütfen bir süre bekleyin.",
+      "error": "Bir hata oluştu. Lütfen tekrar deneyin."
+    }
+  },
+  "pending": {
+    "title": "Onay bekleniyor",
+    "subtitle": "Hesabınız inceleniyor, lütfen bekleyin.",
+    "signOut": "Çıkış Yap"
+  },
+  "blocked": {
+    "title": "Hesap Engellendi",
+    "subtitle": "Hesabınıza erişim engellendi.",
+    "contact": "Yönetici ile iletişime geçin.",
+    "signOut": "Çıkış Yap",
+    "waitingUnblock": "Engel kaldırılırsa otomatik yönlendirileceksiniz."
+  },
+  "nav": {
+    "admin": "Admin",
+    "signOut": "· Çıkış"
+  },
+  "download": {
+    "title": "İndirme",
+    "fetch": "Getir",
+    "loading": "Video bilgisi alınıyor…",
+    "download": "İndir",
+    "starting": "Başlatılıyor…",
+    "downloading": "İndiriliyor",
+    "downloadFile": "Dosyayı İndir",
+    "validFor24h": "(24 saat geçerli)",
+    "new": "Yeni",
+    "retry": "Tekrar dene",
+    "iosNote": "Dosyanız Files uygulamasına inecektir.",
+    "notificationTitle": "DLHub — İndirme Tamamlandı",
+    "notificationBody": "Dosyanız hazır"
+  },
+  "history": {
+    "title": "Geçmiş",
+    "refresh": "Yenile",
+    "search": "Başlık veya URL ara…",
+    "filterAll": "Tümü",
+    "filterCompleted": "Tamamlandı",
+    "filterError": "Hatalı",
+    "filterExpired": "Süresi Doldu",
+    "noResults": "Sonuç bulunamadı",
+    "downloading": "İndiriliyor",
+    "error": "Hata",
+    "expired": "Süresi doldu"
+  },
+  "sites": {
+    "title": "Desteklenen Siteler",
+    "search": "Site ara…",
+    "noResults": "Sonuç bulunamadı",
+    "ytdlpNote": "yt-dlp tarafından desteklenen tüm sitelerle çalışır."
+  },
+  "signout": {
+    "loading": "Çıkış yapılıyor..."
+  }
+}

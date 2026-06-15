@@ -5,6 +5,7 @@ import { RefreshCw, Download, Loader2, AlertCircle, Clock, Search, X } from "luc
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 export interface DownloadRecord {
   id: string;
@@ -53,16 +54,12 @@ function hostOf(url: string): string {
   catch { return url.slice(0, 40); }
 }
 
-const STATUS_FILTERS = [
-  { value: "all", label: "Tümü" },
-  { value: "completed", label: "Tamamlandı" },
-  { value: "error", label: "Hatalı" },
-  { value: "expired", label: "Süresi Doldu" },
-] as const;
+const STATUS_FILTER_KEYS = ["all", "completed", "error", "expired"] as const;
 
-type StatusFilter = (typeof STATUS_FILTERS)[number]["value"];
+type StatusFilter = (typeof STATUS_FILTER_KEYS)[number];
 
 export function DownloadHistory({ initialDownloads }: Props) {
+  const t = useTranslations("history");
   const [downloads, setDownloads] = useState<DownloadRecord[]>(initialDownloads);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [query, setQuery] = useState("");
@@ -101,14 +98,14 @@ export function DownloadHistory({ initialDownloads }: Props) {
     <div className="rounded-xl border border-border bg-card p-5 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          Geçmiş
+          {t("title")}
         </h2>
         <Button
           variant="ghost"
           size="icon-sm"
           onClick={refresh}
           disabled={isRefreshing}
-          aria-label="Yenile"
+          aria-label={t("refresh")}
         >
           <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} />
         </Button>
@@ -119,7 +116,7 @@ export function DownloadHistory({ initialDownloads }: Props) {
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Başlık veya URL ara…"
+            placeholder={t("search")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="pl-8 pr-8 h-8 text-sm"
@@ -134,25 +131,25 @@ export function DownloadHistory({ initialDownloads }: Props) {
           )}
         </div>
         <div className="flex gap-1.5 flex-wrap">
-          {STATUS_FILTERS.map((f) => (
+          {STATUS_FILTER_KEYS.map((key) => (
             <button
-              key={f.value}
-              onClick={() => setStatusFilter(f.value)}
+              key={key}
+              onClick={() => setStatusFilter(key)}
               className={cn(
                 "px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors cursor-pointer",
-                statusFilter === f.value
+                statusFilter === key
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               )}
             >
-              {f.label}
+              {t(`filter${key.charAt(0).toUpperCase() + key.slice(1)}` as Parameters<typeof t>[0])}
             </button>
           ))}
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-3">Sonuç bulunamadı</p>
+        <p className="text-xs text-muted-foreground text-center py-3">{t("noResults")}</p>
       ) : (
       <ul className="space-y-1.5">
         {filtered.map((dl) => {
@@ -187,7 +184,7 @@ export function DownloadHistory({ initialDownloads }: Props) {
                 {isActive ? (
                   <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Loader2 className="size-3.5 animate-spin" />
-                    İndiriliyor
+                    {t("downloading")}
                   </span>
                 ) : canDownload ? (
                   <a href={`/api/downloads/${dl.id}/file?token=${dl.token}`}>
@@ -198,12 +195,12 @@ export function DownloadHistory({ initialDownloads }: Props) {
                 ) : dl.status === "error" ? (
                   <span className="flex items-center gap-1 text-xs text-destructive">
                     <AlertCircle className="size-3.5" />
-                    Hata
+                    {t("error")}
                   </span>
                 ) : (
                   <span className="flex items-center gap-1 text-xs text-muted-foreground/60">
                     <Clock className="size-3.5" />
-                    Süresi doldu
+                    {t("expired")}
                   </span>
                 )}
               </div>

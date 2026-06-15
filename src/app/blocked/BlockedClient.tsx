@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldX } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface BlockedClientProps {
   userEmail: string | null;
@@ -11,6 +12,7 @@ interface BlockedClientProps {
 
 export function BlockedClient({ userEmail, userName }: BlockedClientProps) {
   const router = useRouter();
+  const t = useTranslations("blocked");
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   useEffect(() => {
@@ -67,10 +69,9 @@ export function BlockedClient({ userEmail, userName }: BlockedClientProps) {
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-xl font-semibold">Hesabınız Engellendi</h2>
-            <p className="text-sm text-muted-foreground">
-              Hesabınıza erişim kısıtlanmıştır. Engeliniz kaldırıldığında otomatik olarak yönlendirileceksiniz.
-            </p>
+            <h2 className="text-xl font-semibold">{t("title")}</h2>
+            <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+            <p className="text-xs text-muted-foreground/60">{t("waitingUnblock")}</p>
           </div>
 
           {(userName || userEmail) && (

@@ -1,0 +1,75 @@
+{
+  "login": {
+    "title": "DLHub",
+    "subtitle": "Video download platform",
+    "googleSignIn": "Sign in with Google",
+    "or": "or",
+    "sendMagicLink": "Send Magic Link",
+    "emailPlaceholder": "Your email address",
+    "linkSent": "Sign-in link sent",
+    "checkEmail": "Check {email}",
+    "awaitingApproval": "Awaiting approval...",
+    "redirecting": "Redirecting",
+    "errors": {
+      "accessDenied": "Your account has been blocked. Contact an administrator for access.",
+      "verification": "Sign-in link has expired. Please request a new magic link.",
+      "generic": "An error occurred while signing in. Please try again.",
+      "blocked": "Access to this account has been blocked.",
+      "rateLimited": "Too many attempts. Please wait a while.",
+      "error": "An error occurred. Please try again."
+    }
+  },
+  "pending": {
+    "title": "Awaiting approval",
+    "subtitle": "Your account is being reviewed, please wait.",
+    "signOut": "Sign Out"
+  },
+  "blocked": {
+    "title": "Account Blocked",
+    "subtitle": "Access to your account has been blocked.",
+    "contact": "Contact an administrator.",
+    "signOut": "Sign Out",
+    "waitingUnblock": "You will be redirected automatically if the block is lifted."
+  },
+  "nav": {
+    "admin": "Admin",
+    "signOut": "· Sign out"
+  },
+  "download": {
+    "title": "Download",
+    "fetch": "Fetch",
+    "loading": "Loading video info…",
+    "download": "Download",
+    "starting": "Starting…",
+    "downloading": "Downloading",
+    "downloadFile": "Download File",
+    "validFor24h": "(valid for 24h)",
+    "new": "New",
+    "retry": "Try again",
+    "iosNote": "Your file will be saved to the Files app.",
+    "notificationTitle": "DLHub — Download Complete",
+    "notificationBody": "Your file is ready"
+  },
+  "history": {
+    "title": "History",
+    "refresh": "Refresh",
+    "search": "Search by title or URL…",
+    "filterAll": "All",
+    "filterCompleted": "Completed",
+    "filterError": "Error",
+    "filterExpired": "Expired",
+    "noResults": "No results found",
+    "downloading": "Downloading",
+    "error": "Error",
+    "expired": "Expired"
+  },
+  "sites": {
+    "title": "Supported Sites",
+    "search": "Search site…",
+    "noResults": "No results found",
+    "ytdlpNote": "Works with all sites supported by yt-dlp."
+  },
+  "signout": {
+    "loading": "Signing out..."
+  }
+}

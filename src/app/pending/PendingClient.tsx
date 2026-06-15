@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { signIn, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 const PENDING_COOKIE_NAME = "dlhub-pending";
 
 interface PendingClientProps {
@@ -20,6 +21,7 @@ function clearPendingCookie() {
 
 export function PendingClient({ userName, userEmail, userId, hasSession }: PendingClientProps) {
   const router = useRouter();
+  const t = useTranslations("pending");
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   useEffect(() => {
@@ -117,10 +119,8 @@ export function PendingClient({ userName, userEmail, userId, hasSession }: Pendi
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-xl font-semibold">Onay Bekleniyor</h2>
-            <p className="text-sm text-muted-foreground">
-              Hesabınız inceleniyor. Onaylandığında otomatik olarak yönlendirileceksiniz.
-            </p>
+            <h2 className="text-xl font-semibold">{t("title")}</h2>
+            <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
           </div>
 
           {(userName || userEmail) && (
@@ -144,7 +144,7 @@ export function PendingClient({ userName, userEmail, userId, hasSession }: Pendi
             }
           }}
         >
-          Çıkış Yap
+          {t("signOut")}
         </Button>
       </div>
     </div>

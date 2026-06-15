@@ -1,10 +1,12 @@
 import { auth, signOut } from "@/lib/auth";
 import { ThemeToggle } from "./ThemeToggle";
+import { LanguageToggle } from "./LanguageToggle";
 import { Download, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { getTranslations } from "next-intl/server";
 
 interface NavbarProps {
   maxWidth?: string;
@@ -13,6 +15,7 @@ interface NavbarProps {
 
 export async function Navbar({ maxWidth = "max-w-3xl", extraActions }: NavbarProps) {
   const session = await auth();
+  const t = await getTranslations("nav");
 
   const isAdmin =
     session?.user?.id
@@ -30,7 +33,7 @@ export async function Navbar({ maxWidth = "max-w-3xl", extraActions }: NavbarPro
           DLHub
         </Link>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {extraActions}
           {isAdmin && (
             <Link
@@ -38,9 +41,10 @@ export async function Navbar({ maxWidth = "max-w-3xl", extraActions }: NavbarPro
               className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-md hover:bg-muted"
             >
               <ShieldCheck className="size-3.5" />
-              Admin
+              {t("admin")}
             </Link>
           )}
+          <LanguageToggle />
           <ThemeToggle />
           {session?.user && (
             <form
@@ -54,7 +58,7 @@ export async function Navbar({ maxWidth = "max-w-3xl", extraActions }: NavbarPro
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-md hover:bg-muted cursor-pointer"
               >
                 {session.user.name?.split(" ")[0] ?? session.user.email}
-                <span className="text-muted-foreground/60 ml-1.5">· Çıkış</span>
+                <span className="text-muted-foreground/60 ml-1.5">{t("signOut")}</span>
               </button>
             </form>
           )}

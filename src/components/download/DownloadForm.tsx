@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Download, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SupportedSites } from "./SupportedSites";
+import { useTranslations } from "next-intl";
 
 interface VideoFormat {
   id: string;
@@ -44,6 +45,7 @@ function fmtDuration(sec: number): string {
 }
 
 export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
+  const t = useTranslations("download");
   const [url, setUrl] = useState("");
   const [phase, setPhase] = useState<Phase>({ type: "idle" });
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
@@ -101,8 +103,8 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
       } else if (data.status === "completed") {
         es.close();
         if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-          new Notification("DLHub — İndirme Tamamlandı", {
-            body: titleRef.current ?? "Dosyanız hazır",
+          new Notification(t("notificationTitle"), {
+            body: titleRef.current ?? t("notificationBody"),
           });
         }
         setPhase((prev) => ({
@@ -190,7 +192,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
   return (
     <div className="rounded-xl border border-border bg-card p-5 space-y-5">
       <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-        İndirme
+        {t("title")}
       </h2>
 
       {/* URL girişi */}
@@ -207,7 +209,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
             onKeyDown={(e) => { if (e.key === "Enter") handleFetchFormats(); }}
           />
           <Button onClick={handleFetchFormats} disabled={!url.trim() || isFetching}>
-            Getir
+            {t("fetch")}
           </Button>
         </div>
         <SupportedSites />
@@ -218,7 +220,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
       {phase.type === "fetching" && (
         <div className="flex items-center gap-3 py-3 text-muted-foreground">
           <Loader2 className="size-4 animate-spin shrink-0" />
-          <span className="text-sm">Video bilgisi alınıyor…</span>
+          <span className="text-sm">{t("loading")}</span>
         </div>
       )}
 
@@ -266,9 +268,9 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
             size="lg"
           >
             {isStarting ? (
-              <><Loader2 className="size-4 animate-spin" /> Başlatılıyor…</>
+              <><Loader2 className="size-4 animate-spin" /> {t("starting")}</>
             ) : (
-              <><Download className="size-4" /> İndir</>
+              <><Download className="size-4" /> {t("download")}</>
             )}
           </Button>
         </div>
@@ -307,7 +309,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle className="size-4 text-green-500 shrink-0" />
-            <span className="font-medium truncate">{phase.title ?? "İndirme tamamlandı"}</span>
+            <span className="font-medium truncate">{phase.title ?? t("download")}</span>
           </div>
           <div className="flex gap-2">
             <a
@@ -316,17 +318,17 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
             >
               <Button className="w-full" size="lg">
                 <Download className="size-4" />
-                Dosyayı İndir
-                <span className="text-xs opacity-70 ml-1">(24 saat geçerli)</span>
+                {t("downloadFile")}
+                <span className="text-xs opacity-70 ml-1">{t("validFor24h")}</span>
               </Button>
             </a>
             <Button variant="outline" size="lg" onClick={handleReset}>
-              Yeni
+              {t("new")}
             </Button>
           </div>
           {isIOS && (
             <p className="text-xs text-muted-foreground text-center">
-              Dosyanız Files uygulamasına inecektir.
+              {t("iosNote")}
             </p>
           )}
         </div>
@@ -343,7 +345,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
             onClick={handleReset}
             className="text-xs text-destructive/70 hover:text-destructive underline underline-offset-2 cursor-pointer"
           >
-            Tekrar dene
+            {t("retry")}
           </button>
         </div>
       )}

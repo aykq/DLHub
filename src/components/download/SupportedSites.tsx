@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 const SITES = [
   { name: "YouTube", domain: "youtube.com" },
@@ -54,6 +55,7 @@ const SITES = [
 ] as const;
 
 export function SupportedSites() {
+  const t = useTranslations("sites");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -75,7 +77,7 @@ export function SupportedSites() {
         <ChevronDown
           className={cn("size-3.5 transition-transform duration-200", open && "rotate-180")}
         />
-        Desteklenen Siteler
+        {t("title")}
       </button>
 
       {open && (
@@ -83,7 +85,7 @@ export function SupportedSites() {
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Site ara…"
+              placeholder={t("search")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="pl-8 h-8 text-sm"
@@ -92,7 +94,7 @@ export function SupportedSites() {
           </div>
 
           {filtered.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-2">Sonuç bulunamadı</p>
+            <p className="text-xs text-muted-foreground text-center py-2">{t("noResults")}</p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {filtered.map((s) => (
@@ -106,9 +108,7 @@ export function SupportedSites() {
             </div>
           )}
 
-          <p className="text-xs text-muted-foreground/60">
-            yt-dlp tarafından desteklenen tüm sitelerle çalışır.
-          </p>
+          <p className="text-xs text-muted-foreground/60">{t("ytdlpNote")}</p>
         </div>
       )}
     </div>

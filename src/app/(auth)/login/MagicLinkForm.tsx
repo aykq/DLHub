@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckCircle2, Clock, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 type State = "idle" | "loading" | "pending" | "email-sent" | "error" | "blocked" | "rate-limited";
 
@@ -12,6 +13,7 @@ export function MagicLinkForm() {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<State>("idle");
   const router = useRouter();
+  const t = useTranslations("login");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,8 +51,8 @@ export function MagicLinkForm() {
           <CheckCircle2 className="h-6 w-6 text-green-500" />
         </div>
         <div className="text-center space-y-0.5">
-          <p className="text-sm font-medium">Giriş linki gönderildi</p>
-          <p className="text-xs text-muted-foreground">{email} adresini kontrol edin</p>
+          <p className="text-sm font-medium">{t("linkSent")}</p>
+          <p className="text-xs text-muted-foreground">{t("checkEmail", { email })}</p>
         </div>
       </div>
     );
@@ -63,8 +65,8 @@ export function MagicLinkForm() {
           <Clock className="h-6 w-6 text-muted-foreground" />
         </div>
         <div className="text-center space-y-0.5">
-          <p className="text-sm font-medium">Onay bekleniyor...</p>
-          <p className="text-xs text-muted-foreground">Yönlendiriliyorsunuz</p>
+          <p className="text-sm font-medium">{t("awaitingApproval")}</p>
+          <p className="text-xs text-muted-foreground">{t("redirecting")}</p>
         </div>
       </div>
     );
@@ -74,7 +76,7 @@ export function MagicLinkForm() {
     <form onSubmit={handleSubmit} className="space-y-3">
       <Input
         type="email"
-        placeholder="E-posta adresiniz"
+        placeholder={t("emailPlaceholder")}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
@@ -82,22 +84,16 @@ export function MagicLinkForm() {
         disabled={state === "loading"}
       />
       {state === "error" && (
-        <p className="text-xs text-destructive text-center">
-          Bir hata oluştu. Lütfen tekrar deneyin.
-        </p>
+        <p className="text-xs text-destructive text-center">{t("errors.error")}</p>
       )}
       {state === "blocked" && (
-        <p className="text-xs text-destructive text-center">
-          Bu hesaba erişim engellendi.
-        </p>
+        <p className="text-xs text-destructive text-center">{t("errors.blocked")}</p>
       )}
       {state === "rate-limited" && (
-        <p className="text-xs text-destructive text-center">
-          Çok fazla deneme. Lütfen bir süre bekleyin.
-        </p>
+        <p className="text-xs text-destructive text-center">{t("errors.rateLimited")}</p>
       )}
       <Button type="submit" className="w-full" disabled={state === "loading" || !email}>
-        {state === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Magic Link Gönder"}
+        {state === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : t("sendMagicLink")}
       </Button>
     </form>
   );
