@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { users, downloads } from "@/db/schema";
+import { users, downloads, settings } from "@/db/schema";
 import { desc, asc, eq, or } from "drizzle-orm";
 import { AdminDashboard, type AdminUser, type AdminDownload, type AdminStats } from "@/components/admin/AdminDashboard";
 import { readdir, stat } from "fs/promises";
@@ -26,7 +26,7 @@ async function getDiskUsage(): Promise<number | null> {
 }
 
 export default async function AdminPage() {
-  const [allUsers, allDownloads, diskUsage] = await Promise.all([
+  const [allUsers, allDownloads, diskUsage, allSettings] = await Promise.all([
     db
       .select({
         id: users.id,
@@ -59,6 +59,7 @@ export default async function AdminPage() {
       .orderBy(desc(downloads.createdAt))
       .limit(100),
     getDiskUsage(),
+    db.select().from(settings),
   ]);
 
   const pendingCount = allUsers.filter((u) => u.status === "pending").length;
@@ -66,11 +67,15 @@ export default async function AdminPage() {
     (dl) => dl.status === "downloading" || dl.status === "pending"
   ).length;
 
+  const settingsMap = Object.fromEntries(allSettings.map((s) => [s.key, s.value]));
+
   const stats: AdminStats = {
     totalUsers: allUsers.length,
     pendingUsers: pendingCount,
     activeDownloads: activeCount,
     diskUsage,
+    totalDownloadedBytes: 0,
+    platformStats: [],
   };
 
   const initialUsers: AdminUser[] = allUsers.map((u) => ({
@@ -90,6 +95,10 @@ export default async function AdminPage() {
         initialStats={stats}
         initialUsers={initialUsers}
         initialDownloads={initialDownloads}
+        initialSettings={{
+          daily_download_limit: settingsMap.daily_download_limit ?? "10",
+          whitelist_domains: settingsMap.whitelist_domains ?? "",
+        }}
       />
     </main>
   );

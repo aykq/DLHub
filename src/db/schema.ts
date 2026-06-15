@@ -82,6 +82,11 @@ export const downloads = pgTable("download", {
   errorMessage: text("error_message"),
 });
 
+export const settings = pgTable("setting", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
+
 export const notifications = pgTable("notification", {
   id: text("id")
     .primaryKey()

@@ -1,10 +1,11 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { downloads, users } from "@/db/schema";
-import { eq, desc, or } from "drizzle-orm";
+import { eq, desc, or, and, gte, count } from "drizzle-orm";
 import { parseFormatId } from "@/lib/formats";
 import { metubeAdd } from "@/lib/metube";
 import { createDownloadToken } from "@/lib/download-token";
+import { getSetting } from "@/lib/settings";
 import { type NextRequest } from "next/server";
 
 export async function GET() {
@@ -53,6 +54,38 @@ export async function POST(req: NextRequest) {
   const fmt = formatId ? parseFormatId(formatId) : null;
   if (!fmt) {
     return Response.json({ error: "Geçersiz format seçimi" }, { status: 400 });
+  }
+
+  // Whitelist kontrolü
+  const whitelistValue = await getSetting("whitelist_domains");
+  const whitelist = whitelistValue.split(",").map((d) => d.trim()).filter(Boolean);
+  if (whitelist.length > 0) {
+    try {
+      const hostname = new URL(url).hostname.replace(/^www\./, "");
+      const allowed = whitelist.some((d) => hostname === d || hostname.endsWith(`.${d}`));
+      if (!allowed) {
+        return Response.json({ error: "Bu domain indirme için izin verilmiyor" }, { status: 403 });
+      }
+    } catch {
+      return Response.json({ error: "Geçerli bir URL girin" }, { status: 400 });
+    }
+  }
+
+  // Günlük indirme limiti kontrolü
+  const limitValue = await getSetting("daily_download_limit");
+  const dailyLimit = parseInt(limitValue, 10);
+  if (dailyLimit > 0) {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [{ total: todayCount }] = await db
+      .select({ total: count() })
+      .from(downloads)
+      .where(and(eq(downloads.userId, session.user.id), gte(downloads.createdAt, since)));
+    if (todayCount >= dailyLimit) {
+      return Response.json(
+        { error: `Günlük indirme limitine ulaştınız (${dailyLimit})` },
+        { status: 429 }
+      );
+    }
   }
 
   // Sistem geneli max 1 eş zamanlı indirme

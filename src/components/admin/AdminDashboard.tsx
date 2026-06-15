@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Users,
   Download,
@@ -14,6 +15,8 @@ import {
   Loader2,
   AlertCircle,
   ShieldCheck,
+  BarChart2,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,12 +50,20 @@ export interface AdminStats {
   pendingUsers: number;
   activeDownloads: number;
   diskUsage: number | null;
+  totalDownloadedBytes: number;
+  platformStats: { domain: string; count: number; bytes: number }[];
+}
+
+export interface AdminSettings {
+  daily_download_limit: string;
+  whitelist_domains: string;
 }
 
 interface Props {
   initialStats: AdminStats;
   initialUsers: AdminUser[];
   initialDownloads: AdminDownload[];
+  initialSettings: AdminSettings;
 }
 
 function fmtBytes(bytes: number): string {
@@ -120,13 +131,16 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function AdminDashboard({ initialStats, initialUsers, initialDownloads }: Props) {
+export function AdminDashboard({ initialStats, initialUsers, initialDownloads, initialSettings }: Props) {
   const [stats, setStats] = useState<AdminStats>(initialStats);
   const [users, setUsers] = useState<AdminUser[]>(initialUsers);
   const [dlList, setDlList] = useState<AdminDownload[]>(initialDownloads);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cronResult, setCronResult] = useState<string | null>(null);
+  const [settingsForm, setSettingsForm] = useState<AdminSettings>(initialSettings);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsSaved, setSettingsSaved] = useState(false);
 
   function setItemLoading(key: string, val: boolean) {
     setLoading((prev) => ({ ...prev, [key]: val }));
@@ -147,6 +161,21 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads }:
       setIsRefreshing(false);
     }
   }, []);
+
+  async function saveSettings() {
+    setSettingsSaving(true);
+    setSettingsSaved(false);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settingsForm),
+      });
+      if (res.ok) setSettingsSaved(true);
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
 
   useEffect(() => {
     function handleNotification() { void refresh(); }
@@ -444,6 +473,41 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads }:
         )}
       </section>
 
+      {/* İstatistikler */}
+      {(stats.totalDownloadedBytes > 0 || stats.platformStats.length > 0) && (
+        <section className="rounded-xl border border-border bg-card p-5 space-y-3">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+            <BarChart2 className="size-3.5" />
+            İstatistikler
+          </h2>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Toplam indirilen</span>
+              <span className="font-medium">{fmtBytes(stats.totalDownloadedBytes)}</span>
+            </div>
+            {stats.platformStats.length > 0 && (
+              <div className="space-y-1.5 pt-1">
+                {stats.platformStats.map((p) => (
+                  <div key={p.domain} className="flex items-center gap-2 text-xs">
+                    <span className="text-muted-foreground w-36 truncate">{p.domain}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full"
+                        style={{
+                          width: `${Math.round((p.count / (stats.platformStats[0]?.count || 1)) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="text-muted-foreground w-8 text-right">{p.count}</span>
+                    <span className="text-muted-foreground w-16 text-right">{fmtBytes(p.bytes)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* İndirmeler */}
       <section className="rounded-xl border border-border bg-card p-5 space-y-3">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
@@ -516,6 +580,54 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads }:
             })}
           </ul>
         )}
+      </section>
+
+      {/* Ayarlar */}
+      <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+          <Settings className="size-3.5" />
+          Ayarlar
+        </h2>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              Günlük indirme limiti (kullanıcı başına, 0 = sınırsız)
+            </label>
+            <Input
+              type="number"
+              min="0"
+              value={settingsForm.daily_download_limit}
+              onChange={(e) =>
+                setSettingsForm((prev) => ({ ...prev, daily_download_limit: e.target.value }))
+              }
+              className="h-8 w-32 text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              İzin verilen domainler (virgülle ayır, boş = hepsi)
+            </label>
+            <Input
+              placeholder="youtube.com, twitter.com, tiktok.com"
+              value={settingsForm.whitelist_domains}
+              onChange={(e) =>
+                setSettingsForm((prev) => ({ ...prev, whitelist_domains: e.target.value }))
+              }
+              className="h-8 text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <Button size="sm" onClick={saveSettings} disabled={settingsSaving}>
+              {settingsSaving ? <Loader2 className="size-3.5 animate-spin" /> : "Kaydet"}
+            </Button>
+            {settingsSaved && (
+              <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                <CheckCircle className="size-3.5" />
+                Kaydedildi
+              </span>
+            )}
+          </div>
+        </div>
       </section>
     </div>
   );

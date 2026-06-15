@@ -159,7 +159,15 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
       });
       const data = await res.json() as { id?: string; error?: string };
       if (!res.ok) {
-        setPhase({ type: "error", message: data.error ?? "İndirme başlatılamadı" });
+        setPhase({
+          type: "error",
+          message:
+            res.status === 429
+              ? (data.error ?? "Günlük indirme limitine ulaştınız")
+              : res.status === 403
+              ? (data.error ?? "Bu domain indirme için izin verilmiyor")
+              : (data.error ?? "İndirme başlatılamadı"),
+        });
         return;
       }
       setPhase({ type: "downloading", downloadId: data.id!, title: phase.info.title, percent: 0, speed: null, eta: null });
