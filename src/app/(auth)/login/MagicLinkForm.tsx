@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckCircle2, Loader2 } from "lucide-react";
@@ -10,6 +11,19 @@ export function MagicLinkForm() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!sent) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/auth/session");
+        const data = await res.json();
+        if (data?.user) router.push("/");
+      } catch {}
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [sent, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
