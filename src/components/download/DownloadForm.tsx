@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Download, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SupportedSites } from "./SupportedSites";
 
 interface VideoFormat {
   id: string;
@@ -194,9 +195,10 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
 
       {/* URL girişi */}
       {(phase.type === "idle" || phase.type === "error" || phase.type === "ready") && (
+        <div className="space-y-3">
         <div className="flex gap-2">
           <Input
-            placeholder="https://youtube.com/watch?v=..."
+            placeholder=""
             value={url}
             onChange={(e) => {
               setUrl(e.target.value);
@@ -207,6 +209,8 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
           <Button onClick={handleFetchFormats} disabled={!url.trim() || isFetching}>
             Getir
           </Button>
+        </div>
+        <SupportedSites />
         </div>
       )}
 
