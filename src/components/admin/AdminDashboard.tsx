@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Users,
@@ -132,7 +132,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads }:
     setLoading((prev) => ({ ...prev, [key]: val }));
   }
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
       const [usersRes, dlRes, statsRes] = await Promise.all([
@@ -146,7 +146,13 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads }:
     } finally {
       setIsRefreshing(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    function handleNotification() { void refresh(); }
+    window.addEventListener("dlhub:notification", handleNotification);
+    return () => window.removeEventListener("dlhub:notification", handleNotification);
+  }, [refresh]);
 
   async function runCron() {
     setItemLoading("cron", true);

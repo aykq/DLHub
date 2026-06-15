@@ -37,6 +37,7 @@ export function NotificationBell() {
     es.onmessage = (event) => {
       const data = JSON.parse(event.data as string) as Notification;
       setNotifications((prev) => [{ ...data, read: false }, ...prev].slice(0, 50));
+      window.dispatchEvent(new CustomEvent("dlhub:notification", { detail: data }));
     };
     return () => es.close();
   }, []);

@@ -16,6 +16,16 @@ export function PendingClient({ userName, userEmail }: PendingClientProps) {
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   useEffect(() => {
+    // SSE for instant notification when admin approves/blocks
+    const es = new EventSource("/api/me/approval-stream");
+    es.onmessage = (event) => {
+      const data = JSON.parse(event.data as string) as { status: string };
+      if (data.status === "approved") router.push("/");
+      if (data.status === "blocked") signOut({ callbackUrl: "/login?error=AccessDenied" });
+    };
+    es.onerror = () => es.close();
+
+    // Polling fallback in case SSE fails or connection drops
     async function checkStatus() {
       try {
         const res = await fetch("/api/me/status");
@@ -26,9 +36,12 @@ export function PendingClient({ userName, userEmail }: PendingClientProps) {
         // ignore
       }
     }
-
     intervalRef.current = setInterval(checkStatus, 5000);
-    return () => clearInterval(intervalRef.current);
+
+    return () => {
+      es.close();
+      clearInterval(intervalRef.current);
+    };
   }, [router]);
 
   return (

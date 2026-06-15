@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { type NextRequest } from "next/server";
+import { broadcastUserStatus } from "@/lib/notifications";
 
 export async function PATCH(
   req: NextRequest,
@@ -27,6 +28,12 @@ export async function PATCH(
   }
 
   await db.update(users).set(updates).where(eq(users.id, id));
+
+  // Notify the user's pending page if their status changed
+  if (updates.status) {
+    broadcastUserStatus(id, { status: updates.status });
+  }
+
   return Response.json({ ok: true });
 }
 
