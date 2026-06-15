@@ -1,0 +1,39 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Deploy to VDS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VDS_HOST }}
+          username: root
+          key: ${{ secrets.VDS_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/dlhub
+
+            echo "==> git pull"
+            git pull origin main
+
+            echo "==> build app + migrate images"
+            docker compose build app migrate
+
+            echo "==> run migrations"
+            docker compose --profile migrate run --rm migrate
+
+            echo "==> restart app"
+            docker compose up -d app
+
+            echo "==> cleanup old images"
+            docker image prune -f
+
+            echo "==> done"
