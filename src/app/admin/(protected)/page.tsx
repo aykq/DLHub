@@ -90,16 +90,18 @@ export default async function AdminPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 space-y-6">
-      <AdminDashboard
-        initialStats={stats}
-        initialUsers={initialUsers}
-        initialDownloads={initialDownloads}
-        initialSettings={{
-          daily_download_limit: settingsMap.daily_download_limit ?? "10",
-          whitelist_domains: settingsMap.whitelist_domains ?? "",
-        }}
-      />
+    <main className="flex-1 w-full">
+      <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+        <AdminDashboard
+          initialStats={stats}
+          initialUsers={initialUsers}
+          initialDownloads={initialDownloads}
+          initialSettings={{
+            daily_download_limit: settingsMap.daily_download_limit ?? "10",
+            whitelist_domains: settingsMap.whitelist_domains ?? "",
+          }}
+        />
+      </div>
     </main>
   );
 }
