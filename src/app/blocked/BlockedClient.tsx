@@ -1,0 +1,86 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { ShieldX } from "lucide-react";
+
+interface BlockedClientProps {
+  userEmail: string | null;
+  userName: string | null;
+}
+
+export function BlockedClient({ userEmail, userName }: BlockedClientProps) {
+  const router = useRouter();
+  const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  useEffect(() => {
+    const es = new EventSource("/api/me/approval-stream");
+    es.onmessage = (event) => {
+      const data = JSON.parse(event.data as string) as { status: string };
+      if (data.status === "approved") {
+        es.close();
+        clearInterval(intervalRef.current);
+        router.push("/");
+      }
+      if (data.status === "deleted") {
+        es.close();
+        clearInterval(intervalRef.current);
+        window.location.href = "/force-signout";
+      }
+    };
+    es.onerror = () => es.close();
+
+    async function checkStatus() {
+      try {
+        const res = await fetch("/api/me/status");
+        const data = await res.json() as { status: string };
+        if (data.status === "approved") {
+          clearInterval(intervalRef.current);
+          router.push("/");
+        }
+        if (data.status === "unknown") {
+          clearInterval(intervalRef.current);
+          window.location.href = "/force-signout";
+        }
+      } catch {
+        // ignore
+      }
+    }
+    intervalRef.current = setInterval(checkStatus, 5000);
+
+    return () => {
+      es.close();
+      clearInterval(intervalRef.current);
+    };
+  }, [router]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm space-y-8 text-center">
+        <h1 className="text-4xl font-black tracking-tight">DLHub</h1>
+
+        <div className="space-y-4">
+          <div className="flex justify-center">
+            <div className="rounded-full bg-destructive/10 p-4">
+              <ShieldX className="h-8 w-8 text-destructive" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">Hesabınız Engellendi</h2>
+            <p className="text-sm text-muted-foreground">
+              Hesabınıza erişim kısıtlanmıştır. Engeliniz kaldırıldığında otomatik olarak yönlendirileceksiniz.
+            </p>
+          </div>
+
+          {(userName || userEmail) && (
+            <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm space-y-0.5">
+              {userName && <p className="font-medium">{userName}</p>}
+              {userEmail && <p className="text-muted-foreground">{userEmail}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

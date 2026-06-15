@@ -16,7 +16,7 @@ export default async function PendingPage() {
     });
     if (!user) redirect("/force-signout");
     if (user.status === "approved") redirect("/");
-    if (user.status === "blocked") redirect("/force-signout");
+    if (user.status === "blocked") redirect("/blocked");
 
     return (
       <PendingClient

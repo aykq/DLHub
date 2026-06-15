@@ -25,8 +25,8 @@ export async function GET() {
     columns: { status: true },
   });
 
-  if (!user || user.status !== "pending") {
-    return Response.json({ error: "Not pending" }, { status: 400 });
+  if (!user || (user.status !== "pending" && user.status !== "blocked")) {
+    return Response.json({ error: "Not eligible" }, { status: 400 });
   }
 
   const encoder = new TextEncoder();

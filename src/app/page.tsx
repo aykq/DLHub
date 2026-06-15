@@ -19,7 +19,7 @@ export default async function HomePage() {
 
   if (!dbUser) redirect("/force-signout");
   if (dbUser.status === "pending") redirect("/pending");
-  if (dbUser.status === "blocked") redirect("/force-signout");
+  if (dbUser.status === "blocked") redirect("/blocked");
 
   const userDownloads = await db.query.downloads.findMany({
     where: eq(downloads.userId, session.user.id),

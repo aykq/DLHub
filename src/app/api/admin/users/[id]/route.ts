@@ -75,5 +75,6 @@ export async function DELETE(
   }
 
   await db.delete(users).where(eq(users.id, id));
+  broadcastUserStatus(id, { status: "deleted" });
   return Response.json({ ok: true });
 }

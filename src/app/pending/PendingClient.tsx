@@ -44,12 +44,19 @@ export function PendingClient({ userName, userEmail, userId, hasSession }: Pendi
       if (data.status === "blocked") {
         es.close();
         clearInterval(intervalRef.current);
-        clearPendingCookie();
         if (hasSession) {
-          await signOut({ callbackUrl: "/login?error=AccessDenied" });
+          router.push("/blocked");
         } else {
+          clearPendingCookie();
           window.location.href = "/login?error=AccessDenied";
         }
+      }
+
+      if (data.status === "deleted") {
+        es.close();
+        clearInterval(intervalRef.current);
+        clearPendingCookie();
+        window.location.href = hasSession ? "/force-signout" : "/login";
       }
     };
     es.onerror = () => es.close();
@@ -73,12 +80,17 @@ export function PendingClient({ userName, userEmail, userId, hasSession }: Pendi
         }
         if (data.status === "blocked") {
           clearInterval(intervalRef.current);
-          clearPendingCookie();
           if (hasSession) {
-            await signOut({ callbackUrl: "/login?error=AccessDenied" });
+            router.push("/blocked");
           } else {
+            clearPendingCookie();
             window.location.href = "/login?error=AccessDenied";
           }
+        }
+        if (data.status === "unknown") {
+          clearInterval(intervalRef.current);
+          clearPendingCookie();
+          window.location.href = hasSession ? "/force-signout" : "/login";
         }
       } catch {
         // ignore
