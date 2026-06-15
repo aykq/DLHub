@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
             userId: newUser.id,
             name: null,
             email,
-            provider: "resend",
+            provider: "nodemailer",
             image: null,
             isNewUser: true,
             signedInAt: new Date(),
@@ -64,10 +64,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  try {
-    await signIn("resend", { email, redirect: false });
-    return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Failed to send" }, { status: 500 });
-  }
+  await signIn("nodemailer", { email, redirect: false });
+  return NextResponse.json({ ok: true });
 }

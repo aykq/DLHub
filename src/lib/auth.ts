@@ -1,6 +1,6 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
-import Resend from "next-auth/providers/resend";
+import Nodemailer from "next-auth/providers/nodemailer";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/db";
 import { accounts, sessions, users, verificationTokens } from "@/db/schema";
@@ -22,9 +22,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: process.env.AUTH_GOOGLE_SECRET ?? "",
       authorization: { params: { prompt: "select_account" } },
     }),
-    Resend({
-      apiKey: process.env.AUTH_RESEND_KEY ?? "",
-      from: "DLHub <noreply@dlhub.aykq.org.tr>",
+    Nodemailer({
+      server: {
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
+        auth: {
+          user: process.env.EMAIL_USER ?? "",
+          pass: process.env.EMAIL_APP_PASSWORD ?? "",
+        },
+      },
+      from: `DLHub <${process.env.EMAIL_USER ?? ""}>`,
     }),
   ],
   pages: {
