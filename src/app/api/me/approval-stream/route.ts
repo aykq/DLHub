@@ -3,14 +3,23 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { addUserSseClient, removeUserSseClient } from "@/lib/notifications";
+import { getPendingUserId } from "@/lib/pending-cookie";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  // JWT session (Google OAuth veya approved magic link kullanıcısı)
+  let userId: string | null = null;
 
-  const userId = session.user.id;
+  const session = await auth();
+  if (session?.user?.id) {
+    userId = session.user.id;
+  } else {
+    userId = await getPendingUserId();
+  }
+
+  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
   const user = await db.query.users.findFirst({
     where: eq(users.id, userId),
     columns: { status: true },
@@ -26,10 +35,9 @@ export async function GET() {
   const stream = new ReadableStream({
     start(c) {
       ctrl = c;
-      addUserSseClient(userId, ctrl);
+      addUserSseClient(userId!, ctrl);
       c.enqueue(encoder.encode(": connected\n\n"));
 
-      // Heartbeat every 25s to keep connection alive through proxies
       const heartbeat = setInterval(() => {
         try {
           c.enqueue(encoder.encode(": ping\n\n"));
@@ -38,13 +46,12 @@ export async function GET() {
         }
       }, 25000);
 
-      // Store cleanup ref on controller via closure
       (ctrl as ReadableStreamDefaultController & { _hb?: ReturnType<typeof setInterval> })._hb = heartbeat;
     },
     cancel() {
       const hb = (ctrl as ReadableStreamDefaultController & { _hb?: ReturnType<typeof setInterval> })._hb;
       if (hb) clearInterval(hb);
-      removeUserSseClient(userId, ctrl);
+      removeUserSseClient(userId!, ctrl);
     },
   });
 

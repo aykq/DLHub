@@ -1,6 +1,10 @@
 import { signIn } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { getPendingUserId } from "@/lib/pending-cookie";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { MagicLinkForm } from "./MagicLinkForm";
 import { Button } from "@/components/ui/button";
@@ -15,6 +19,17 @@ export default async function LoginPage({
 }) {
   const session = await auth();
   if (session) redirect("/");
+
+  // Pending cookie varsa → kullanıcı zaten kuyruktaysa /pending'e yönlendir
+  const pendingUserId = await getPendingUserId();
+  if (pendingUserId) {
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, pendingUserId),
+      columns: { status: true },
+    });
+    if (user?.status === "pending") redirect("/pending");
+    // approved veya blocked ise cookie geçersiz, normal login sayfasını göster
+  }
 
   const params = await searchParams;
   const isBlocked = params.error === "AccessDenied";

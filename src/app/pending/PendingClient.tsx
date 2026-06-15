@@ -2,36 +2,84 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { PENDING_COOKIE_NAME } from "@/lib/pending-cookie";
 
 interface PendingClientProps {
   userName: string | null;
   userEmail: string | null;
+  userId: string;
+  hasSession: boolean;
 }
 
-export function PendingClient({ userName, userEmail }: PendingClientProps) {
+function clearPendingCookie() {
+  document.cookie = `${PENDING_COOKIE_NAME}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+}
+
+export function PendingClient({ userName, userEmail, userId, hasSession }: PendingClientProps) {
   const router = useRouter();
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   useEffect(() => {
-    // SSE for instant notification when admin approves/blocks
     const es = new EventSource("/api/me/approval-stream");
-    es.onmessage = (event) => {
+    es.onmessage = async (event) => {
       const data = JSON.parse(event.data as string) as { status: string };
-      if (data.status === "approved") router.push("/");
-      if (data.status === "blocked") signOut({ callbackUrl: "/login?error=AccessDenied" });
+
+      if (data.status === "approved") {
+        es.close();
+        clearInterval(intervalRef.current);
+        if (hasSession) {
+          router.push("/");
+        } else {
+          const result = await signIn("pending-approval", { userId, redirect: false });
+          if (result && !result.error) {
+            clearPendingCookie();
+            router.push("/");
+          }
+        }
+      }
+
+      if (data.status === "blocked") {
+        es.close();
+        clearInterval(intervalRef.current);
+        clearPendingCookie();
+        if (hasSession) {
+          await signOut({ callbackUrl: "/login?error=AccessDenied" });
+        } else {
+          window.location.href = "/login?error=AccessDenied";
+        }
+      }
     };
     es.onerror = () => es.close();
 
-    // Polling fallback in case SSE fails or connection drops
+    // Polling fallback — SSE kopunca devreye girer
     async function checkStatus() {
       try {
         const res = await fetch("/api/me/status");
         const data = await res.json() as { status: string };
-        if (data.status === "approved") router.push("/");
-        if (data.status === "blocked") signOut({ callbackUrl: "/login?error=AccessDenied" });
+        if (data.status === "approved") {
+          clearInterval(intervalRef.current);
+          if (hasSession) {
+            router.push("/");
+          } else {
+            const result = await signIn("pending-approval", { userId, redirect: false });
+            if (result && !result.error) {
+              clearPendingCookie();
+              router.push("/");
+            }
+          }
+        }
+        if (data.status === "blocked") {
+          clearInterval(intervalRef.current);
+          clearPendingCookie();
+          if (hasSession) {
+            await signOut({ callbackUrl: "/login?error=AccessDenied" });
+          } else {
+            window.location.href = "/login?error=AccessDenied";
+          }
+        }
       } catch {
         // ignore
       }
@@ -42,7 +90,7 @@ export function PendingClient({ userName, userEmail }: PendingClientProps) {
       es.close();
       clearInterval(intervalRef.current);
     };
-  }, [router]);
+  }, [router, hasSession, userId]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -75,7 +123,14 @@ export function PendingClient({ userName, userEmail }: PendingClientProps) {
           variant="ghost"
           size="sm"
           className="text-muted-foreground"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => {
+            clearPendingCookie();
+            if (hasSession) {
+              void signOut({ callbackUrl: "/login" });
+            } else {
+              window.location.href = "/login";
+            }
+          }}
         >
           Çıkış Yap
         </Button>

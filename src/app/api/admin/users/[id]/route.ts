@@ -4,6 +4,7 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { type NextRequest } from "next/server";
 import { broadcastUserStatus } from "@/lib/notifications";
+import { signIn } from "@/lib/auth";
 
 export async function PATCH(
   req: NextRequest,
@@ -29,9 +30,27 @@ export async function PATCH(
 
   await db.update(users).set(updates).where(eq(users.id, id));
 
-  // Notify the user's pending page if their status changed
   if (updates.status) {
     broadcastUserStatus(id, { status: updates.status });
+
+    // Onaylandığında kullanıcıya giriş emaili gönder
+    if (updates.status === "approved") {
+      try {
+        const user = await db.query.users.findFirst({
+          where: eq(users.id, id),
+          columns: { email: true },
+        });
+        if (user?.email) {
+          await signIn("nodemailer", {
+            email: user.email,
+            redirect: false,
+            callbackUrl: "/",
+          });
+        }
+      } catch (err) {
+        console.error("Approval email failed:", err);
+      }
+    }
   }
 
   return Response.json({ ok: true });

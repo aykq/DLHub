@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Nodemailer from "next-auth/providers/nodemailer";
+import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/db";
 import { accounts, sessions, users, verificationTokens } from "@/db/schema";
@@ -33,6 +34,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       },
       from: `DLHub <${process.env.EMAIL_USER ?? ""}>`,
+      sendVerificationRequest: async ({ identifier: email, url, provider }) => {
+        const { createTransport } = await import("nodemailer");
+        const transport = createTransport(provider.server as object);
+        await transport.sendMail({
+          to: email,
+          from: provider.from,
+          subject: "DLHub — Hesabınız Onaylandı",
+          text: `Hesabınız onaylandı. Giriş yapmak için aşağıdaki bağlantıya tıklayın:\n\n${url}\n\nBağlantı 24 saat geçerlidir.`,
+          html: `
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
+              <h1 style="font-size:24px;font-weight:900;margin:0 0 8px">DLHub</h1>
+              <p style="color:#6b7280;margin:0 0 32px;font-size:14px">Video indirme platformu</p>
+              <h2 style="font-size:18px;font-weight:700;margin:0 0 12px">Hesabınız Onaylandı</h2>
+              <p style="color:#374151;font-size:14px;margin:0 0 24px">
+                Hesabınız onaylandı. Aşağıdaki butona tıklayarak giriş yapabilirsiniz.
+              </p>
+              <a href="${url}" style="display:inline-block;background:#000;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600">
+                Giriş Yap
+              </a>
+              <p style="color:#9ca3af;font-size:12px;margin:24px 0 0">
+                Bu bağlantı 24 saat geçerlidir. Eğer bu isteği siz yapmadıysanız görmezden gelebilirsiniz.
+              </p>
+            </div>
+          `,
+        });
+      },
+    }),
+    Credentials({
+      id: "pending-approval",
+      credentials: { userId: {} },
+      authorize: async ({ userId }) => {
+        if (!userId || typeof userId !== "string") return null;
+        const user = await db.query.users.findFirst({
+          where: eq(users.id, userId),
+          columns: { id: true, email: true, name: true, image: true, status: true },
+        });
+        if (!user || user.status !== "approved") return null;
+        return { id: user.id, email: user.email, name: user.name, image: user.image };
+      },
     }),
   ],
   pages: {
@@ -58,6 +98,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .set({ role: "admin", status: "approved" })
           .where(eq(users.id, user.id));
       }
+
+      // nodemailer ve pending-approval için bildirim gönderilmez
+      // (nodemailer: signup aşamasında zaten gidiyor; pending-approval: sessiz login)
+      if (account?.provider === "nodemailer" || account?.provider === "pending-approval") return;
 
       // Giriş bildirimi — Discord + in-app notification
       if (user.id && account?.provider) {

@@ -6,6 +6,7 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { sendSignInDiscordNotification } from "@/lib/discord";
 import { createNotification, broadcastNotification } from "@/lib/notifications";
+import { setPendingCookie } from "@/lib/pending-cookie";
 
 const schema = z.object({ email: z.string().email() });
 
@@ -18,14 +19,27 @@ export async function POST(req: NextRequest) {
 
   const email = parsed.data.email;
 
-  // Yeni kullanıcıysa hemen pending olarak ekle ve admin'i bilgilendir
   const existing = await db.query.users.findFirst({
     where: eq(users.email, email),
     columns: { id: true, status: true },
   });
 
+  // Blocklı kullanıcı
+  if (existing?.status === "blocked") {
+    return NextResponse.json({ error: "blocked" }, { status: 403 });
+  }
+
+  // Onaylı kullanıcı — magic link emaili gönder, pending ekranı gösterme
+  if (existing?.status === "approved") {
+    await signIn("nodemailer", { email, redirect: false, callbackUrl: "/" });
+    return NextResponse.json({ ok: true, status: "email-sent" });
+  }
+
+  // Yeni veya pending kullanıcı — email gönderme, cookie set et
+  const isAdmin = email === process.env.ADMIN_EMAIL;
+
+  let userId: string;
   if (!existing) {
-    const isAdmin = email === process.env.ADMIN_EMAIL;
     const [newUser] = await db
       .insert(users)
       .values({
@@ -34,36 +48,47 @@ export async function POST(req: NextRequest) {
         role: isAdmin ? "admin" : "user",
       })
       .returning({ id: users.id });
+    userId = newUser.id;
 
-    if (!isAdmin) {
-      const message = `Yeni kullanıcı onay bekliyor: ${email} (magic link)`;
-      try {
-        await Promise.all([
-          sendSignInDiscordNotification({
-            userId: newUser.id,
-            name: null,
-            email,
-            provider: "nodemailer",
-            image: null,
-            isNewUser: true,
-            signedInAt: new Date(),
-          }),
-          createNotification("new_user", message, newUser.id),
-        ]);
-        broadcastNotification({
-          type: "new_user",
-          message,
-          userId: newUser.id,
-          email,
-          isNewUser: true,
-          createdAt: new Date().toISOString(),
-        });
-      } catch (err) {
-        console.error("Magic link pre-create notification failed:", err);
-      }
+    // Admin emaili ise direkt magic link gönder
+    if (isAdmin) {
+      await signIn("nodemailer", { email, redirect: false, callbackUrl: "/" });
+      return NextResponse.json({ ok: true, status: "email-sent" });
     }
+
+    // Yeni kullanıcı — Discord + in-app bildirim
+    const message = `Yeni kullanıcı onay bekliyor: ${email}`;
+    try {
+      await Promise.all([
+        sendSignInDiscordNotification({
+          userId,
+          name: null,
+          email,
+          provider: "nodemailer",
+          image: null,
+          isNewUser: true,
+          signedInAt: new Date(),
+        }),
+        createNotification("new_user", message, userId),
+      ]);
+      broadcastNotification({
+        type: "new_user",
+        message,
+        userId,
+        email,
+        isNewUser: true,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error("Signup notification failed:", err);
+    }
+  } else {
+    // Mevcut pending kullanıcı
+    userId = existing.id;
   }
 
-  await signIn("nodemailer", { email, redirect: false, callbackUrl: "/pending" });
-  return NextResponse.json({ ok: true });
+  // Pending cookie set et, email gönderme
+  const res = NextResponse.json({ ok: true, status: "pending" });
+  setPendingCookie(res, userId);
+  return res;
 }
