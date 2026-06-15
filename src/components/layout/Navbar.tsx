@@ -11,7 +11,7 @@ interface NavbarProps {
   extraActions?: React.ReactNode;
 }
 
-export async function Navbar({ maxWidth = "max-w-2xl", extraActions }: NavbarProps) {
+export async function Navbar({ maxWidth = "max-w-3xl", extraActions }: NavbarProps) {
   const session = await auth();
 
   const isAdmin =

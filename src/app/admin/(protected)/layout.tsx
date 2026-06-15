@@ -19,7 +19,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <>
-      <Navbar maxWidth="max-w-4xl" extraActions={<NotificationBell />} />
+      <Navbar maxWidth="max-w-3xl" extraActions={<NotificationBell />} />
       {children}
     </>
   );

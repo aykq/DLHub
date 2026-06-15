@@ -85,7 +85,7 @@ export default async function AdminPage() {
   }));
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8 space-y-6">
+    <main className="mx-auto max-w-3xl px-4 py-8 space-y-6">
       <AdminDashboard
         initialStats={stats}
         initialUsers={initialUsers}
