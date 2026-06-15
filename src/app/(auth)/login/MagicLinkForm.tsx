@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckCircle2, Clock, Loader2 } from "lucide-react";
 
-type State = "idle" | "loading" | "pending" | "email-sent" | "error" | "blocked";
+type State = "idle" | "loading" | "pending" | "email-sent" | "error" | "blocked" | "rate-limited";
 
 export function MagicLinkForm() {
   const [email, setEmail] = useState("");
@@ -24,6 +24,10 @@ export function MagicLinkForm() {
         body: JSON.stringify({ email }),
       });
       const data = await res.json() as { ok?: boolean; status?: string; error?: string };
+      if (res.status === 429) {
+        setState("rate-limited");
+        return;
+      }
       if (!res.ok || !data.ok) {
         setState(data.error === "blocked" ? "blocked" : "error");
         return;
@@ -85,6 +89,11 @@ export function MagicLinkForm() {
       {state === "blocked" && (
         <p className="text-xs text-destructive text-center">
           Bu hesaba erişim engellendi.
+        </p>
+      )}
+      {state === "rate-limited" && (
+        <p className="text-xs text-destructive text-center">
+          Çok fazla deneme. Lütfen bir süre bekleyin.
         </p>
       )}
       <Button type="submit" className="w-full" disabled={state === "loading" || !email}>

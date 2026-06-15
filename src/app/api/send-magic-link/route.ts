@@ -7,10 +7,27 @@ import { eq } from "drizzle-orm";
 import { sendSignInDiscordNotification } from "@/lib/discord";
 import { createNotification, broadcastNotification } from "@/lib/notifications";
 import { setPendingCookie } from "@/lib/pending-cookie";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({ email: z.string().email() });
 
+const HOUR_MS = 60 * 60 * 1000;
+
 export async function POST(req: NextRequest) {
+  // IP bazlı rate limit (Cloudflare Tunnel arkasında CF-Connecting-IP güvenilir)
+  const ip =
+    req.headers.get("CF-Connecting-IP") ??
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "unknown";
+
+  const ipCheck = checkRateLimit(`ip:${ip}`, 20, HOUR_MS);
+  if (!ipCheck.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited", retryAfter: ipCheck.retryAfterSeconds },
+      { status: 429 }
+    );
+  }
+
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -18,6 +35,15 @@ export async function POST(req: NextRequest) {
   }
 
   const email = parsed.data.email;
+
+  // Email bazlı rate limit
+  const emailCheck = checkRateLimit(`email:${email}`, 5, HOUR_MS);
+  if (!emailCheck.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited", retryAfter: emailCheck.retryAfterSeconds },
+      { status: 429 }
+    );
+  }
 
   const existing = await db.query.users.findFirst({
     where: eq(users.email, email),
