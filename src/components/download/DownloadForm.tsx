@@ -47,9 +47,14 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
   const [phase, setPhase] = useState<Phase>({ type: "idle" });
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const esRef = useRef<EventSource | null>(null);
   const titleRef = useRef<string | null>(null);
   const isFetching = phase.type === "fetching";
+
+  useEffect(() => {
+    setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
+  }, []);
 
   useEffect(() => {
     if (!activeDownloadId) return;
@@ -307,6 +312,11 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
               Yeni
             </Button>
           </div>
+          {isIOS && (
+            <p className="text-xs text-muted-foreground text-center">
+              Dosyanız Files uygulamasına inecektir.
+            </p>
+          )}
         </div>
       )}
 
