@@ -54,4 +54,3 @@ export async function getPendingUserId(): Promise<string | null> {
   return verify(value);
 }
 
-export const PENDING_COOKIE_NAME = COOKIE_NAME;

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { signIn, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { PENDING_COOKIE_NAME } from "@/lib/pending-cookie";
+const PENDING_COOKIE_NAME = "dlhub-pending";
 
 interface PendingClientProps {
   userName: string | null;
