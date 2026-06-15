@@ -17,9 +17,11 @@ export function MagicLinkForm() {
     if (!sent) return;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch("/api/auth/session");
-        const data = await res.json();
-        if (data?.user) router.push("/");
+        const res = await fetch("/api/me/status");
+        if (!res.ok) return;
+        const data = await res.json() as { status: string };
+        if (data.status === "approved") router.push("/");
+        if (data.status === "pending") router.push("/pending");
       } catch {}
     }, 3000);
     return () => clearInterval(interval);

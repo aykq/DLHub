@@ -64,6 +64,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  await signIn("nodemailer", { email, redirect: false });
+  await signIn("nodemailer", { email, redirect: false, callbackUrl: "/pending" });
   return NextResponse.json({ ok: true });
 }
