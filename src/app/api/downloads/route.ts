@@ -4,6 +4,7 @@ import { downloads, users } from "@/db/schema";
 import { eq, desc, or } from "drizzle-orm";
 import { parseFormatId } from "@/lib/formats";
 import { metubeAdd } from "@/lib/metube";
+import { createDownloadToken } from "@/lib/download-token";
 import { type NextRequest } from "next/server";
 
 export async function GET() {
@@ -16,7 +17,18 @@ export async function GET() {
     limit: 50,
   });
 
-  return Response.json(userDownloads);
+  const now = new Date();
+  const result = userDownloads.map((dl) => ({
+    ...dl,
+    createdAt: dl.createdAt.toISOString(),
+    expiresAt: dl.expiresAt?.toISOString() ?? null,
+    token:
+      dl.status === "completed" && dl.expiresAt && dl.expiresAt > now
+        ? createDownloadToken(dl.id, dl.expiresAt)
+        : null,
+  }));
+
+  return Response.json(result);
 }
 
 export async function POST(req: NextRequest) {

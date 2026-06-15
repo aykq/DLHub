@@ -1,8 +1,12 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { users, downloads } from "@/db/schema";
+import { eq, desc, or } from "drizzle-orm";
+import { Navbar } from "@/components/layout/Navbar";
+import { DownloadForm } from "@/components/download/DownloadForm";
+import { DownloadHistory, type DownloadRecord } from "@/components/download/DownloadHistory";
+import { createDownloadToken } from "@/lib/download-token";
 
 export default async function HomePage() {
   const session = await auth();
@@ -16,10 +20,43 @@ export default async function HomePage() {
   if (!dbUser || dbUser.status === "pending") redirect("/pending");
   if (dbUser.status === "blocked") redirect("/login?error=AccessDenied");
 
+  const userDownloads = await db.query.downloads.findMany({
+    where: eq(downloads.userId, session.user.id),
+    orderBy: [desc(downloads.createdAt)],
+    limit: 50,
+  });
+
+  const now = new Date();
+
+  const activeDownload = userDownloads.find(
+    (dl) => dl.status === "downloading" || dl.status === "pending"
+  );
+
+  const initialDownloads: DownloadRecord[] = userDownloads.map((dl) => ({
+    id: dl.id,
+    url: dl.url,
+    title: dl.title,
+    format: dl.format,
+    status: dl.status,
+    fileSize: dl.fileSize,
+    expiresAt: dl.expiresAt?.toISOString() ?? null,
+    createdAt: dl.createdAt.toISOString(),
+    token:
+      dl.status === "completed" && dl.expiresAt && dl.expiresAt > now
+        ? createDownloadToken(dl.id, dl.expiresAt)
+        : null,
+  }));
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <h1 className="text-3xl font-bold">DLHub</h1>
-      <p className="mt-2 text-muted-foreground">İndirme arayüzü yakında...</p>
-    </main>
+    <>
+      <Navbar />
+      <main className="mx-auto max-w-2xl px-4 py-8 space-y-4">
+        <DownloadForm
+          activeDownloadId={activeDownload?.id ?? null}
+          activeDownloadTitle={activeDownload?.title ?? null}
+        />
+        <DownloadHistory initialDownloads={initialDownloads} />
+      </main>
+    </>
   );
 }
