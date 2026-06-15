@@ -48,6 +48,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const esRef = useRef<EventSource | null>(null);
+  const titleRef = useRef<string | null>(null);
   const isFetching = phase.type === "fetching";
 
   useEffect(() => {
@@ -82,6 +83,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
       };
 
       if (data.status === "downloading") {
+        if (data.title) titleRef.current = data.title;
         setPhase({
           type: "downloading",
           downloadId,
@@ -92,6 +94,11 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
         });
       } else if (data.status === "completed") {
         es.close();
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+          new Notification("DLHub — İndirme Tamamlandı", {
+            body: titleRef.current ?? "Dosyanız hazır",
+          });
+        }
         setPhase((prev) => ({
           type: "completed",
           downloadId,
@@ -135,6 +142,9 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
   async function handleDownload() {
     if (phase.type !== "ready" || !selectedFormat || isStarting) return;
     setIsStarting(true);
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      void Notification.requestPermission();
+    }
 
     try {
       const res = await fetch("/api/downloads", {

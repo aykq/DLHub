@@ -32,7 +32,16 @@ export default async function LoginPage({
   }
 
   const params = await searchParams;
-  const isBlocked = params.error === "AccessDenied";
+  const error = params.error;
+
+  const errorMessage =
+    error === "AccessDenied"
+      ? "Hesabınız engellenmiş. Erişim için yönetici ile iletişime geçin."
+      : error === "Verification"
+      ? "Giriş bağlantısının süresi dolmuş. Lütfen yeniden magic link gönderin."
+      : error
+      ? "Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin."
+      : null;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -42,15 +51,9 @@ export default async function LoginPage({
           <p className="text-muted-foreground text-sm">Video indirme platformu</p>
         </div>
 
-        {isBlocked && (
+        {errorMessage && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive text-center">
-            Hesabınız engellenmiş. Lütfen yönetici ile iletişime geçin.
-          </div>
-        )}
-
-        {params.error && !isBlocked && (
-          <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive text-center">
-            Giriş yapılırken bir hata oluştu.
+            {errorMessage}
           </div>
         )}
 

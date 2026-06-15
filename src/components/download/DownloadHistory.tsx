@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { RefreshCw, Download, Loader2, AlertCircle, Clock } from "lucide-react";
+import { useState, useMemo } from "react";
+import { RefreshCw, Download, Loader2, AlertCircle, Clock, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export interface DownloadRecord {
@@ -52,9 +53,20 @@ function hostOf(url: string): string {
   catch { return url.slice(0, 40); }
 }
 
+const STATUS_FILTERS = [
+  { value: "all", label: "Tümü" },
+  { value: "completed", label: "Tamamlandı" },
+  { value: "error", label: "Hatalı" },
+  { value: "expired", label: "Süresi Doldu" },
+] as const;
+
+type StatusFilter = (typeof STATUS_FILTERS)[number]["value"];
+
 export function DownloadHistory({ initialDownloads }: Props) {
   const [downloads, setDownloads] = useState<DownloadRecord[]>(initialDownloads);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   async function refresh() {
     setIsRefreshing(true);
@@ -65,6 +77,23 @@ export function DownloadHistory({ initialDownloads }: Props) {
       setIsRefreshing(false);
     }
   }
+
+  const filtered = useMemo(() => {
+    return downloads.filter((dl) => {
+      const effectiveStatus =
+        dl.status === "completed" && dl.expiresAt && new Date(dl.expiresAt) <= new Date()
+          ? "expired"
+          : dl.status;
+
+      if (statusFilter !== "all" && effectiveStatus !== statusFilter) return false;
+      if (!query) return true;
+      const q = query.toLowerCase();
+      return (
+        (dl.title ?? "").toLowerCase().includes(q) ||
+        dl.url.toLowerCase().includes(q)
+      );
+    });
+  }, [downloads, query, statusFilter]);
 
   if (downloads.length === 0) return null;
 
@@ -85,8 +114,48 @@ export function DownloadHistory({ initialDownloads }: Props) {
         </Button>
       </div>
 
+      {/* Arama + filtre */}
+      <div className="space-y-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Başlık veya URL ara…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-8 pr-8 h-8 text-sm"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          {STATUS_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setStatusFilter(f.value)}
+              className={cn(
+                "px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors cursor-pointer",
+                statusFilter === f.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-3">Sonuç bulunamadı</p>
+      ) : (
       <ul className="space-y-1.5">
-        {downloads.map((dl) => {
+        {filtered.map((dl) => {
           const isActive = dl.status === "downloading" || dl.status === "pending";
           const isExpired = dl.status === "expired" ||
             (dl.status === "completed" && dl.expiresAt && new Date(dl.expiresAt) <= new Date());
@@ -142,6 +211,7 @@ export function DownloadHistory({ initialDownloads }: Props) {
           );
         })}
       </ul>
+      )}
     </div>
   );
 }
