@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { type NextRequest } from "next/server";
 import { broadcastUserStatus, broadcastNotification } from "@/lib/notifications";
 import { signIn } from "@/lib/auth";
+import { sendUnblockedEmail } from "@/lib/email";
 
 export async function PATCH(
   req: NextRequest,
@@ -28,6 +29,18 @@ export async function PATCH(
     return Response.json({ error: "Geçersiz güncelleme" }, { status: 400 });
   }
 
+  // Status değişikliği varsa güncelleme öncesi mevcut durumu al
+  let previousStatus: string | undefined;
+  let userEmail: string | undefined;
+  if (updates.status === "approved") {
+    const current = await db.query.users.findFirst({
+      where: eq(users.id, id),
+      columns: { status: true, email: true },
+    });
+    previousStatus = current?.status;
+    userEmail = current?.email ?? undefined;
+  }
+
   await db.update(users).set(updates).where(eq(users.id, id));
 
   if (updates.status) {
@@ -39,22 +52,21 @@ export async function PATCH(
       createdAt: new Date().toISOString(),
     });
 
-    // Onaylandığında kullanıcıya giriş emaili gönder
-    if (updates.status === "approved") {
+    if (updates.status === "approved" && userEmail) {
       try {
-        const user = await db.query.users.findFirst({
-          where: eq(users.id, id),
-          columns: { email: true },
-        });
-        if (user?.email) {
+        if (previousStatus === "pending") {
+          // İlk onay: magic link emaili gönder
           await signIn("nodemailer", {
-            email: user.email,
+            email: userEmail,
             redirect: false,
             callbackUrl: "/",
           });
+        } else if (previousStatus === "blocked") {
+          // Engel kaldırma: bilgilendirme emaili gönder (magic link değil)
+          await sendUnblockedEmail(userEmail);
         }
       } catch (err) {
-        console.error("Approval email failed:", err);
+        console.error("Status email failed:", err);
       }
     }
   }

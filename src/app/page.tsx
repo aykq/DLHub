@@ -6,6 +6,7 @@ import { eq, desc, or } from "drizzle-orm";
 import { Navbar } from "@/components/layout/Navbar";
 import { DownloadForm } from "@/components/download/DownloadForm";
 import { DownloadHistory, type DownloadRecord } from "@/components/download/DownloadHistory";
+import { StatusMonitor } from "@/components/StatusMonitor";
 import { createDownloadToken } from "@/lib/download-token";
 
 export default async function HomePage() {
@@ -51,6 +52,7 @@ export default async function HomePage() {
   return (
     <>
       <Navbar />
+      <StatusMonitor />
       <main className="mx-auto max-w-2xl px-4 py-8 space-y-4">
         <DownloadForm
           activeDownloadId={activeDownload?.id ?? null}
