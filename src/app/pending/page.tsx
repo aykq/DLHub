@@ -14,9 +14,9 @@ export default async function PendingPage() {
       where: eq(users.id, session.user.id),
       columns: { status: true },
     });
-    if (!user) redirect("/login");
+    if (!user) redirect("/force-signout");
     if (user.status === "approved") redirect("/");
-    if (user.status === "blocked") redirect("/login?error=AccessDenied");
+    if (user.status === "blocked") redirect("/force-signout");
 
     return (
       <PendingClient

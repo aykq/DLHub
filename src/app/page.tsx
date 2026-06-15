@@ -17,8 +17,9 @@ export default async function HomePage() {
     columns: { status: true, role: true },
   });
 
-  if (!dbUser || dbUser.status === "pending") redirect("/pending");
-  if (dbUser.status === "blocked") redirect("/login?error=AccessDenied");
+  if (!dbUser) redirect("/force-signout");
+  if (dbUser.status === "pending") redirect("/pending");
+  if (dbUser.status === "blocked") redirect("/force-signout");
 
   const userDownloads = await db.query.downloads.findMany({
     where: eq(downloads.userId, session.user.id),

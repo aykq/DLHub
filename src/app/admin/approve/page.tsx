@@ -3,6 +3,8 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { verifyApprovalToken } from "@/lib/admin-token";
+import { broadcastUserStatus, broadcastNotification } from "@/lib/notifications";
+import { signIn } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 
 export default async function ApprovePage({
@@ -39,15 +41,34 @@ export default async function ApprovePage({
 
   async function approve() {
     "use server";
-    if (!payload) return;
+    if (!payload || !user) return;
     await db.update(users).set({ status: "approved" }).where(eq(users.id, payload.userId));
+    broadcastUserStatus(payload.userId, { status: "approved" });
+    broadcastNotification({
+      type: "user_approved",
+      message: `Kullanıcı onaylandı: ${user.email ?? user.name ?? "—"}`,
+      userId: payload.userId,
+      createdAt: new Date().toISOString(),
+    });
+    if (user.email) {
+      try {
+        await signIn("nodemailer", { email: user.email, redirect: false, callbackUrl: "/" });
+      } catch {}
+    }
     redirect("/admin/approve?approved=1");
   }
 
   async function block() {
     "use server";
-    if (!payload) return;
+    if (!payload || !user) return;
     await db.update(users).set({ status: "blocked" }).where(eq(users.id, payload.userId));
+    broadcastUserStatus(payload.userId, { status: "blocked" });
+    broadcastNotification({
+      type: "user_blocked",
+      message: `Kullanıcı engellendi: ${user.email ?? user.name ?? "—"}`,
+      userId: payload.userId,
+      createdAt: new Date().toISOString(),
+    });
     redirect("/admin/approve?blocked=1");
   }
 

@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { type NextRequest } from "next/server";
-import { broadcastUserStatus } from "@/lib/notifications";
+import { broadcastUserStatus, broadcastNotification } from "@/lib/notifications";
 import { signIn } from "@/lib/auth";
 
 export async function PATCH(
@@ -32,6 +32,12 @@ export async function PATCH(
 
   if (updates.status) {
     broadcastUserStatus(id, { status: updates.status });
+    broadcastNotification({
+      type: `user_${updates.status}`,
+      message: `Kullanıcı durumu güncellendi: ${updates.status}`,
+      userId: id,
+      createdAt: new Date().toISOString(),
+    });
 
     // Onaylandığında kullanıcıya giriş emaili gönder
     if (updates.status === "approved") {
