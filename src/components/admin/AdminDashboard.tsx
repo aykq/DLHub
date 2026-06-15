@@ -126,6 +126,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads }:
   const [dlList, setDlList] = useState<AdminDownload[]>(initialDownloads);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [cronResult, setCronResult] = useState<string | null>(null);
 
   function setItemLoading(key: string, val: boolean) {
     setLoading((prev) => ({ ...prev, [key]: val }));
@@ -144,6 +145,26 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads }:
       if (statsRes.ok) setStats(await statsRes.json() as AdminStats);
     } finally {
       setIsRefreshing(false);
+    }
+  }
+
+  async function runCron() {
+    setItemLoading("cron", true);
+    setCronResult(null);
+    try {
+      const res = await fetch("/api/admin/cron/run", { method: "POST" });
+      const data = await res.json() as { ok?: boolean; expiredRemoved?: number; stuckReset?: number; errors?: string[]; error?: string };
+      if (res.ok) {
+        setCronResult(
+          `Temizlik tamamlandı — süresi dolan: ${data.expiredRemoved ?? 0}, takılı kalan: ${data.stuckReset ?? 0}` +
+            (data.errors?.length ? ` | Hatalar: ${data.errors.join(", ")}` : "")
+        );
+        await refresh();
+      } else {
+        setCronResult(`Hata: ${data.error ?? "bilinmeyen"}`);
+      }
+    } finally {
+      setItemLoading("cron", false);
     }
   }
 
@@ -211,17 +232,39 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads }:
           <h1 className="text-xl font-bold">Admin Paneli</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Sistem yönetimi</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={refresh}
-          disabled={isRefreshing}
-          className="gap-1.5"
-        >
-          <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} />
-          Yenile
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={runCron}
+            disabled={!!loading["cron"]}
+            className="gap-1.5"
+          >
+            {loading["cron"] ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Clock className="size-3.5" />
+            )}
+            Temizlik
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refresh}
+            disabled={isRefreshing}
+            className="gap-1.5"
+          >
+            <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} />
+            Yenile
+          </Button>
+        </div>
       </div>
+
+      {cronResult && (
+        <div className="rounded-lg border border-border bg-muted/40 px-4 py-2.5 text-sm text-muted-foreground">
+          {cronResult}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
