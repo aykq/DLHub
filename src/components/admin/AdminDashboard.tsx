@@ -148,18 +148,20 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
   const [settingsForm, setSettingsForm] = useState<AdminSettings>(initialSettings);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
+  const [statsPeriod, setStatsPeriod] = useState<"7d" | "30d" | "all">("all");
 
   function setItemLoading(key: string, val: boolean) {
     setLoading((prev) => ({ ...prev, [key]: val }));
   }
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (period?: string) => {
     setIsRefreshing(true);
     try {
+      const p = period ?? statsPeriod;
       const [usersRes, dlRes, statsRes] = await Promise.all([
         fetch("/api/admin/users"),
         fetch("/api/admin/downloads"),
-        fetch("/api/admin/stats"),
+        fetch(`/api/admin/stats?period=${p}`),
       ]);
       if (usersRes.ok) setUsers(await usersRes.json() as AdminUser[]);
       if (dlRes.ok) setDlList(await dlRes.json() as AdminDownload[]);
@@ -167,7 +169,14 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statsPeriod]);
+
+  async function changePeriod(period: "7d" | "30d" | "all") {
+    setStatsPeriod(period);
+    const statsRes = await fetch(`/api/admin/stats?period=${period}`);
+    if (statsRes.ok) setStats(await statsRes.json() as AdminStats);
+  }
 
   async function saveSettings() {
     setSettingsSaving(true);
@@ -292,7 +301,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
           <Button
             variant="outline"
             size="sm"
-            onClick={refresh}
+            onClick={() => void refresh()}
             disabled={isRefreshing}
             className="gap-1.5"
           >
@@ -497,10 +506,28 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       {/* İstatistikler */}
       {(stats.totalDownloadedBytes > 0 || stats.platformStats.length > 0) && (
         <section className="rounded-xl border border-border bg-card p-5 space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-            <BarChart2 className="size-3.5" />
-            {t("statsSection")}
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <BarChart2 className="size-3.5" />
+              {t("statsSection")}
+            </h2>
+            <div className="flex items-center gap-1">
+              {(["7d", "30d", "all"] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => void changePeriod(p)}
+                  className={cn(
+                    "text-[0.65rem] px-2 py-0.5 rounded font-medium transition-colors",
+                    statsPeriod === p
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  )}
+                >
+                  {p === "7d" ? t("period7d") : p === "30d" ? t("period30d") : t("periodAll")}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">{t("totalDownloaded")}</span>

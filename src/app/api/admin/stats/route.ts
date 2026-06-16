@@ -1,9 +1,10 @@
 import { requireAdmin } from "@/lib/admin-guard";
 import { db } from "@/db";
 import { users, downloads } from "@/db/schema";
-import { eq, or, count, sum } from "drizzle-orm";
+import { eq, or, and, gte, count, sum } from "drizzle-orm";
 import { readdir, stat } from "fs/promises";
 import path from "path";
+import { type NextRequest } from "next/server";
 
 const DOWNLOADS_PATH = process.env.DOWNLOADS_PATH ?? "/downloads";
 
@@ -25,9 +26,22 @@ async function getDiskUsage(): Promise<number | null> {
   }
 }
 
-export async function GET() {
+function periodStart(period: string): Date | null {
+  const now = new Date();
+  if (period === "7d") return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  if (period === "30d") return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  return null; // "all"
+}
+
+export async function GET(req: NextRequest) {
   const adminId = await requireAdmin();
   if (!adminId) return Response.json({ error: "Forbidden" }, { status: 403 });
+
+  const period = req.nextUrl.searchParams.get("period") ?? "all";
+  const since = periodStart(period);
+  const completedFilter = since
+    ? and(eq(downloads.status, "completed"), gte(downloads.createdAt, since))
+    : eq(downloads.status, "completed");
 
   const [
     [{ total: totalUsers }],
@@ -46,11 +60,11 @@ export async function GET() {
     db
       .select({ total: sum(downloads.fileSize) })
       .from(downloads)
-      .where(eq(downloads.status, "completed")),
+      .where(completedFilter),
     db
       .select({ url: downloads.url, fileSize: downloads.fileSize })
       .from(downloads)
-      .where(eq(downloads.status, "completed")),
+      .where(completedFilter),
     getDiskUsage(),
   ]);
 
