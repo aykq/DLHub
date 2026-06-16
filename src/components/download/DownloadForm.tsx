@@ -62,7 +62,10 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
   const t = useTranslations("download");
   const [url, setUrl] = useState("");
   const [phase, setPhase] = useState<Phase>({ type: "idle" });
-  const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
+  const [selectedQuality, setSelectedQuality] = useState<string | null>(null);
+  const [selectedContainer, setSelectedContainer] = useState<"mp4" | "mkv" | "webm">("mp4");
+  const [selectedVcodec, setSelectedVcodec] = useState<string | null>(null);
+  const [selectedAcodec, setSelectedAcodec] = useState<"auto" | "aac" | "opus">("auto");
   const [isStarting, setIsStarting] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const esRef = useRef<EventSource | null>(null);
@@ -146,7 +149,8 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
     const trimmed = url.trim();
     if (!trimmed) return;
     setPhase({ type: "fetching" });
-    setSelectedFormat(null);
+    setSelectedQuality(null);
+    setSelectedVcodec(null);
 
     try {
       const res = await fetch(`/api/formats?url=${encodeURIComponent(trimmed)}`);
@@ -162,7 +166,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
   }
 
   async function handleDownload() {
-    if (phase.type !== "ready" || !selectedFormat || isStarting) return;
+    if (phase.type !== "ready" || !selectedQuality || isStarting) return;
     setIsStarting(true);
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
       void Notification.requestPermission();
@@ -172,7 +176,13 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
       const res = await fetch("/api/downloads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: phase.url, formatId: selectedFormat }),
+        body: JSON.stringify({
+          url: phase.url,
+          quality: selectedQuality,
+          container: selectedQuality === "0" ? "mp3" : selectedContainer,
+          vcodec: selectedVcodec ?? undefined,
+          acodec: selectedAcodec === "auto" ? undefined : selectedAcodec,
+        }),
       });
       const data = await res.json() as { id?: string; error?: string };
       if (!res.ok) {
@@ -200,7 +210,10 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
     esRef.current?.close();
     setPhase({ type: "idle" });
     setUrl("");
-    setSelectedFormat(null);
+    setSelectedQuality(null);
+    setSelectedVcodec(null);
+    setSelectedContainer("mp4");
+    setSelectedAcodec("auto");
   }
 
   return (
@@ -258,53 +271,38 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
             </div>
           )}
 
+          {/* Çözünürlük seçimi */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {phase.info.formats.map((fmt) => {
-              const isCardSelected = selectedFormat === fmt.id || (selectedFormat?.startsWith(`${fmt.id}_`) ?? false);
-              const selectedCodecId = isCardSelected && selectedFormat !== fmt.id
-                ? selectedFormat!.slice(fmt.id.length + 1)
-                : null;
+              const isSelected = selectedQuality === fmt.quality;
               return (
                 <button
                   key={fmt.id}
-                  onClick={() => setSelectedFormat(isCardSelected ? null : fmt.id)}
+                  onClick={() => {
+                    setSelectedQuality(isSelected ? null : fmt.quality);
+                    setSelectedVcodec(null);
+                  }}
                   className={cn(
                     "rounded-lg border px-3 py-2.5 text-left transition-colors cursor-pointer",
-                    isCardSelected
+                    isSelected
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-background hover:bg-muted"
                   )}
                 >
-                  <span className="text-sm font-medium block">{fmt.label}</span>
+                  <span className="text-sm font-medium block">{fmt.label.split(" — ")[0]}</span>
                   {fmt.variants.length > 0 && (
                     <span className="mt-1.5 flex flex-wrap gap-1">
-                      {fmt.variants.map((v) => {
-                        const isCodecSelected = selectedCodecId === v.codecId;
-                        return (
-                          <button
-                            key={v.codec}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (isCodecSelected) {
-                                setSelectedFormat(fmt.id);
-                              } else {
-                                setSelectedFormat(`${fmt.id}_${v.codecId}`);
-                              }
-                            }}
-                            className={cn(
-                              "text-[0.62rem] px-1.5 py-0.5 rounded font-medium cursor-pointer transition-colors",
-                              isCodecSelected
-                                ? "bg-white/90 text-primary ring-1 ring-white/50"
-                                : isCardSelected
-                                ? "bg-white/20 text-primary-foreground hover:bg-white/30"
-                                : "bg-muted text-muted-foreground hover:bg-accent"
-                            )}
-                          >
-                            {v.codec}{v.filesize ? ` ${fmtBytes(v.filesize)}` : ""}
-                          </button>
-                        );
-                      })}
+                      {fmt.variants.map((v) => (
+                        <span
+                          key={v.codec}
+                          className={cn(
+                            "text-[0.62rem] px-1.5 py-0.5 rounded font-medium",
+                            isSelected ? "bg-white/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {v.codec}
+                        </span>
+                      ))}
                     </span>
                   )}
                 </button>
@@ -312,9 +310,84 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
             })}
           </div>
 
+          {/* Format seçenekleri — çözünürlük seçilince göster */}
+          {selectedQuality && selectedQuality !== "0" && (() => {
+            const fmt = phase.info.formats.find(f => f.quality === selectedQuality);
+            return (
+              <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 space-y-3 text-sm">
+                {/* Container */}
+                <div className="flex items-center gap-3">
+                  <span className="text-muted-foreground w-24 shrink-0">Container</span>
+                  <div className="flex gap-1.5">
+                    {(["mp4", "mkv", "webm"] as const).map(c => (
+                      <button key={c} type="button"
+                        onClick={() => setSelectedContainer(c)}
+                        className={cn(
+                          "px-2.5 py-1 rounded text-xs font-medium border transition-colors cursor-pointer",
+                          selectedContainer === c
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border bg-background hover:bg-muted"
+                        )}
+                      >{c.toUpperCase()}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Video codec */}
+                {fmt && fmt.variants.length > 0 && (
+                  <div className="flex items-center gap-3">
+                    <span className="text-muted-foreground w-24 shrink-0">Video</span>
+                    <div className="flex gap-1.5 flex-wrap">
+                      <button type="button"
+                        onClick={() => setSelectedVcodec(null)}
+                        className={cn(
+                          "px-2.5 py-1 rounded text-xs font-medium border transition-colors cursor-pointer",
+                          selectedVcodec === null
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border bg-background hover:bg-muted"
+                        )}
+                      >Auto</button>
+                      {fmt.variants.map(v => (
+                        <button key={v.codecId} type="button"
+                          onClick={() => setSelectedVcodec(selectedVcodec === v.codecId ? null : v.codecId)}
+                          className={cn(
+                            "px-2.5 py-1 rounded text-xs font-medium border transition-colors cursor-pointer",
+                            selectedVcodec === v.codecId
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "border-border bg-background hover:bg-muted"
+                          )}
+                        >
+                          {v.codec}{v.filesize ? ` · ${fmtBytes(v.filesize)}` : ""}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Audio codec */}
+                <div className="flex items-center gap-3">
+                  <span className="text-muted-foreground w-24 shrink-0">Audio</span>
+                  <div className="flex gap-1.5">
+                    {(["auto", "aac", "opus"] as const).map(a => (
+                      <button key={a} type="button"
+                        onClick={() => setSelectedAcodec(a)}
+                        className={cn(
+                          "px-2.5 py-1 rounded text-xs font-medium border transition-colors cursor-pointer",
+                          selectedAcodec === a
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border bg-background hover:bg-muted"
+                        )}
+                      >{a === "auto" ? "Auto" : a.toUpperCase()}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           <Button
             onClick={handleDownload}
-            disabled={!selectedFormat || isStarting}
+            disabled={!selectedQuality || isStarting}
             className="w-full"
             size="lg"
           >

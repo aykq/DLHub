@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { downloads, users } from "@/db/schema";
 import { eq, desc, or, and, gte, count } from "drizzle-orm";
-import { parseFormatId } from "@/lib/formats";
 import { startDownload } from "@/lib/ytdlp-download";
 import { createDownloadToken } from "@/lib/download-token";
 import { getSetting } from "@/lib/settings";
@@ -44,17 +43,26 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Hesabınız henüz onaylanmamış" }, { status: 403 });
   }
 
-  const body = await req.json() as { url?: string; formatId?: string };
-  const { url, formatId } = body;
+  const body = await req.json() as {
+    url?: string;
+    quality?: string;
+    container?: string;
+    vcodec?: string;
+    acodec?: string;
+  };
+  const { url, quality, container, vcodec, acodec } = body;
 
   if (!url || typeof url !== "string" || !url.startsWith("http")) {
     return Response.json({ error: "Geçerli bir URL girin" }, { status: 400 });
   }
 
-  const fmt = formatId ? parseFormatId(formatId) : null;
-  if (!fmt) {
+  const validContainers = ["mp4", "mkv", "webm", "mp3"];
+  if (!quality || !container || !validContainers.includes(container)) {
     return Response.json({ error: "Geçersiz format seçimi" }, { status: 400 });
   }
+
+  // Build a readable format ID for DB storage
+  const formatId = [quality, container, vcodec, acodec].filter(Boolean).join("_");
 
   // Whitelist kontrolü
   const whitelistValue = await getSetting("whitelist_domains");
@@ -105,10 +113,10 @@ export async function POST(req: NextRequest) {
 
   const [record] = await db
     .insert(downloads)
-    .values({ userId: session.user.id, url, format: formatId!, status: "pending" })
+    .values({ userId: session.user.id, url, format: formatId, status: "pending" })
     .returning({ id: downloads.id });
 
-  startDownload(record.id, url, fmt.quality, fmt.format, fmt.codec);
+  startDownload(record.id, url, quality, container, vcodec, acodec);
 
   await db
     .update(downloads)

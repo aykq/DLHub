@@ -20,7 +20,7 @@ interface DownloadEntry extends DownloadProgress {
 
 const progressStore = new Map<string, DownloadEntry>();
 
-function buildFormatArgs(quality: string, ext: string, codec?: string): string[] {
+function buildFormatArgs(quality: string, ext: string, vcodec?: string, acodec?: string): string[] {
   if (quality === "0" || ext === "mp3") {
     return [
       "--format", "bestaudio/best",
@@ -30,31 +30,31 @@ function buildFormatArgs(quality: string, ext: string, codec?: string): string[]
     ];
   }
 
-  const codecFilter = codec ? `[vcodec^=${codec}]` : "";
-  let selector: string;
+  const vf = vcodec ? `[vcodec^=${vcodec}]` : "";
+  // YouTube: AAC = mp4a.*, Opus = opus
+  const af = acodec === "aac" ? "[acodec^=mp4a]" : acodec === "opus" ? "[acodec=opus]" : "";
+  const mergeFormat = ext === "webm" ? "webm" : ext === "mkv" ? "mkv" : "mp4";
 
+  let selector: string;
   if (quality === "best") {
     selector = [
-      `bestvideo${codecFilter}+bestaudio`,
+      `bestvideo${vf}+bestaudio${af}`,
+      `bestvideo${vf}+bestaudio`,
       "bestvideo+bestaudio",
       "best",
     ].join("/");
   } else {
     const h = quality;
     selector = [
-      `bestvideo[height<=${h}]${codecFilter}+bestaudio`,
+      `bestvideo[height<=${h}]${vf}+bestaudio${af}`,
+      `bestvideo[height<=${h}]${vf}+bestaudio`,
       `bestvideo[height<=${h}]+bestaudio`,
       `best[height<=${h}]`,
       "best",
     ].join("/");
   }
 
-  const mergeFormat = ext === "webm" ? "webm" : "mp4";
-
-  return [
-    "--format", selector,
-    "--merge-output-format", mergeFormat,
-  ];
+  return ["--format", selector, "--merge-output-format", mergeFormat];
 }
 
 function titleFromPath(downloadId: string, filePath: string): string | null {
@@ -114,7 +114,8 @@ export function startDownload(
   url: string,
   quality: string,
   ext: string,
-  codec?: string
+  vcodec?: string,
+  acodec?: string
 ): void {
   const entry: DownloadEntry = {
     status: "pending",
@@ -129,7 +130,7 @@ export function startDownload(
   progressStore.set(downloadId, entry);
 
   const outputTemplate = path.join(DOWNLOADS_PATH, `${downloadId}_%(title)s.%(ext)s`);
-  const formatArgs = buildFormatArgs(quality, ext, codec);
+  const formatArgs = buildFormatArgs(quality, ext, vcodec, acodec);
 
   const args = [
     ...formatArgs,
