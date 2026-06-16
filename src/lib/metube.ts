@@ -32,7 +32,9 @@ export async function metubeAdd(
       }),
     });
     if (!res.ok) return { added: false, error: `metube HTTP ${res.status}` };
-    return res.json();
+    const data = await res.json() as { status?: string; added?: boolean; error?: string };
+    if (data.status === "ok" || data.added === true) return { added: true };
+    return { added: false, error: data.error ?? "metube yanıt hatası" };
   } catch (err) {
     return { added: false, error: String(err) };
   }
