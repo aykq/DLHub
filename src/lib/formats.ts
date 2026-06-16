@@ -1,7 +1,6 @@
-// Dinamik format ID'sini çözer: "1080_mp4" → {quality: "1080", format: "mp4"}
-// Kabul edilen pattern: (rakam|"best")_(mp4|mp3|mkv|webm)
-export function parseFormatId(id: string): { quality: string; format: string } | null {
-  const match = id.match(/^(\d+|best)_(mp4|mp3|mkv|webm)$/);
+// Format ID'sini çözer: "1080_mp4" veya "1080_mp4_av01" → {quality, format, codec?}
+export function parseFormatId(id: string): { quality: string; format: string; codec?: string } | null {
+  const match = id.match(/^(\d+|best)_(mp4|mp3|mkv|webm)(?:_(av01|vp09|avc1|hev1|vp08))?$/);
   if (!match) return null;
-  return { quality: match[1], format: match[2] };
+  return { quality: match[1], format: match[2], codec: match[3] };
 }

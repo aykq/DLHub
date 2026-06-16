@@ -2,11 +2,10 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { downloads, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { metubeFindByUrl } from "@/lib/metube";
+import { getProgress, removeFromStore, getFileSize } from "@/lib/ytdlp-download";
 import { createDownloadToken } from "@/lib/download-token";
 import { sendDownloadCompleteDiscordNotification } from "@/lib/discord";
 import { createNotification, broadcastNotification } from "@/lib/notifications";
-import { stat } from "fs/promises";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +29,6 @@ export async function GET(
       url: true,
       format: true,
       status: true,
-      metubeId: true,
       title: true,
       expiresAt: true,
     },
@@ -52,7 +50,6 @@ export async function GET(
     return encoder.encode(`data: ${JSON.stringify(data)}\n\n`);
   }
 
-  // İndirme zaten tamamlanmışsa hemen yanıt ver ve kapat
   if (
     download.status === "completed" ||
     download.status === "error" ||
@@ -69,11 +66,7 @@ export async function GET(
       },
     });
     return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
+      headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
     });
   }
 
@@ -83,11 +76,7 @@ export async function GET(
   const stream = new ReadableStream({
     start(controller) {
       function send(data: object) {
-        try {
-          controller.enqueue(makeEvent(data));
-        } catch {
-          cleanup();
-        }
+        try { controller.enqueue(makeEvent(data)); } catch { cleanup(); }
       }
 
       function cleanup() {
@@ -97,31 +86,20 @@ export async function GET(
 
       function close(data?: object) {
         cleanup();
-        if (data) {
-          try { controller.enqueue(makeEvent(data)); } catch { /* closed */ }
-        }
+        if (data) { try { controller.enqueue(makeEvent(data)); } catch { /* closed */ } }
         try { controller.close(); } catch { /* already closed */ }
       }
 
       keepAliveTimer = setInterval(() => {
-        try {
-          controller.enqueue(encoder.encode(": ping\n\n"));
-        } catch {
-          cleanup();
-        }
+        try { controller.enqueue(encoder.encode(": ping\n\n")); } catch { cleanup(); }
       }, KEEPALIVE_INTERVAL_MS);
 
       pollTimer = setInterval(async () => {
         try {
-          if (!download.metubeId) {
-            send({ status: "pending" });
-            return;
-          }
+          const prog = getProgress(id);
 
-          const found = await metubeFindByUrl(download.metubeId, `${id}_`);
-
-          if (!found) {
-            // metube'de bulunamadı — DB'deki güncel duruma bak
+          if (!prog) {
+            // Not in store — check DB (completed before SSE connected, or server restart)
             const current = await db.query.downloads.findFirst({
               where: eq(downloads.id, id),
               columns: { status: true, expiresAt: true },
@@ -134,65 +112,55 @@ export async function GET(
             return;
           }
 
-          const { item } = found;
-
-          if (item.status === "pending" || item.status === "downloading") {
+          if (prog.status === "pending" || prog.status === "downloading") {
             send({
               status: "downloading",
-              percent: item.percent ?? 0,
-              speed: item.speed,
-              eta: item.eta,
-              title: item.title,
+              percent: prog.percent,
+              speed: prog.speed,
+              eta: prog.eta,
+              title: prog.title,
             });
             return;
           }
 
-          if (item.status === "finished" && item.filename) {
-            // Çift işlemeyi önlemek için DB'deki durumu kontrol et
+          if (prog.status === "finished") {
+            // Avoid double-processing if another SSE client already finalized
             const current = await db.query.downloads.findFirst({
               where: eq(downloads.id, id),
               columns: { status: true, expiresAt: true },
             });
-
             if (current?.status === "completed" && current.expiresAt) {
+              removeFromStore(id);
               close({ status: "completed", token: createDownloadToken(id, current.expiresAt) });
               return;
             }
 
-            const filePath = `/downloads/${item.filename}`;
+            const filePath = prog.filename ?? null;
             const expiryHours = parseInt(process.env.DOWNLOAD_EXPIRY_HOURS ?? "24");
             const expiresAt = new Date(Date.now() + expiryHours * 3600 * 1000);
-
-            let fileSize: number | null = null;
-            try {
-              const st = await stat(filePath);
-              fileSize = st.size;
-            } catch {
-              // boyut alınamadı — kritik değil
-            }
+            const fileSize = filePath ? await getFileSize(filePath) : null;
 
             await db.update(downloads).set({
               status: "completed",
-              title: item.title ?? null,
-              filePath,
+              title: prog.title ?? null,
+              filePath: filePath ?? null,
               fileSize,
               expiresAt,
             }).where(eq(downloads.id, id));
 
             const token = createDownloadToken(id, expiresAt);
 
-            // Bildirimler (hata olsa da indirme tamamlandı sayılır)
             try {
               const userRecord = await db.query.users.findFirst({
                 where: eq(users.id, download.userId),
                 columns: { name: true },
               });
-              const msg = `İndirme tamamlandı: ${item.title ?? download.url}`;
+              const msg = `İndirme tamamlandı: ${prog.title ?? download.url}`;
               await Promise.all([
                 sendDownloadCompleteDiscordNotification({
                   userId: download.userId,
                   userName: userRecord?.name ?? null,
-                  title: item.title ?? null,
+                  title: prog.title ?? null,
                   format: download.format,
                   fileSize,
                 }),
@@ -204,20 +172,20 @@ export async function GET(
                 userId: download.userId,
                 createdAt: new Date().toISOString(),
               });
-            } catch {
-              // bildirim hatası critical değil
-            }
+            } catch { /* bildirim hatası critical değil */ }
 
-            close({ status: "completed", token, title: item.title });
+            removeFromStore(id);
+            close({ status: "completed", token, title: prog.title });
             return;
           }
 
-          if (item.status === "error") {
+          if (prog.status === "error") {
             await db.update(downloads).set({
               status: "error",
-              errorMessage: item.error ?? "Bilinmeyen hata",
+              errorMessage: prog.error ?? "Bilinmeyen hata",
             }).where(eq(downloads.id, id));
-            close({ status: "error", error: item.error });
+            removeFromStore(id);
+            close({ status: "error", error: prog.error });
           }
         } catch (err) {
           console.error("[progress SSE] poll error:", err);
@@ -232,10 +200,6 @@ export async function GET(
   });
 
   return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
+    headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" },
   });
 }

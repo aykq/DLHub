@@ -22,6 +22,7 @@ interface RawInfo {
 
 export interface FormatVariant {
   codec: string;
+  codecId: string;
   filesize: number | null;
   tbr: number | null;
 }
@@ -59,6 +60,15 @@ function codecName(vcodec: string): string {
   return vcodec.split(".")[0].toUpperCase();
 }
 
+function codecId(vcodec: string): string {
+  if (vcodec.startsWith("av01")) return "av01";
+  if (vcodec.startsWith("vp09") || vcodec.startsWith("vp9")) return "vp09";
+  if (vcodec.startsWith("avc1") || vcodec.startsWith("h264")) return "avc1";
+  if (vcodec.startsWith("hev1") || vcodec.startsWith("hvc1")) return "hev1";
+  if (vcodec.startsWith("vp08") || vcodec.startsWith("vp8")) return "vp08";
+  return vcodec.split(".")[0].toLowerCase();
+}
+
 export async function getVideoInfo(url: string): Promise<{
   formats: VideoFormat[];
   title: string;
@@ -80,16 +90,17 @@ export async function getVideoInfo(url: string): Promise<{
     if (!fmt.vcodec || fmt.vcodec === "none") continue;
     if (!fmt.height || fmt.height <= 0) continue;
 
-    const codec = codecName(fmt.vcodec);
+    const name = codecName(fmt.vcodec);
+    const cid = codecId(fmt.vcodec);
     const filesize = fmt.filesize ?? fmt.filesize_approx ?? null;
     const tbr = fmt.tbr ?? null;
 
     if (!heightMap.has(fmt.height)) heightMap.set(fmt.height, new Map());
     const codecMap = heightMap.get(fmt.height)!;
 
-    const existing = codecMap.get(codec);
+    const existing = codecMap.get(name);
     if (!existing || (filesize && (!existing.filesize || filesize > existing.filesize))) {
-      codecMap.set(codec, { codec, filesize, tbr });
+      codecMap.set(name, { codec: name, codecId: cid, filesize, tbr });
     }
   }
 

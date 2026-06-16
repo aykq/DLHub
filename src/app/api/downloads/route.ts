@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { downloads, users } from "@/db/schema";
 import { eq, desc, or, and, gte, count } from "drizzle-orm";
 import { parseFormatId } from "@/lib/formats";
-import { metubeAdd } from "@/lib/metube";
+import { startDownload } from "@/lib/ytdlp-download";
 import { createDownloadToken } from "@/lib/download-token";
 import { getSetting } from "@/lib/settings";
 import { type NextRequest } from "next/server";
@@ -108,23 +108,11 @@ export async function POST(req: NextRequest) {
     .values({ userId: session.user.id, url, format: formatId!, status: "pending" })
     .returning({ id: downloads.id });
 
-  const namePrefix = `${record.id}_`;
-  const result = await metubeAdd(url, fmt.quality, fmt.format, namePrefix);
-
-  if (!result.added) {
-    await db
-      .update(downloads)
-      .set({ status: "error", errorMessage: result.error ?? "metube hatası" })
-      .where(eq(downloads.id, record.id));
-    return Response.json(
-      { error: result.error ?? "İndirme başlatılamadı" },
-      { status: 502 }
-    );
-  }
+  startDownload(record.id, url, fmt.quality, fmt.format, fmt.codec);
 
   await db
     .update(downloads)
-    .set({ status: "downloading", metubeId: url })
+    .set({ status: "downloading" })
     .where(eq(downloads.id, record.id));
 
   return Response.json({ id: record.id }, { status: 201 });

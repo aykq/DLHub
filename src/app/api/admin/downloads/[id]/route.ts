@@ -2,7 +2,7 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { db } from "@/db";
 import { downloads } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { metubeDeleteFromQueue } from "@/lib/metube";
+import { cancelDownload } from "@/lib/ytdlp-download";
 import { unlink } from "fs/promises";
 
 export async function DELETE(
@@ -22,9 +22,7 @@ export async function DELETE(
   if (!download) return Response.json({ error: "Bulunamadı" }, { status: 404 });
 
   if (download.status === "downloading" || download.status === "pending") {
-    try {
-      await metubeDeleteFromQueue([download.url]);
-    } catch { /* sessizce geç */ }
+    cancelDownload(download.id);
   }
 
   if (download.filePath) {

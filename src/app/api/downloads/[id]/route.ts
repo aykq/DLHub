@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { downloads, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { metubeFindByUrl, metubeDeleteFromQueue } from "@/lib/metube";
+import { getProgress, removeFromStore, cancelDownload } from "@/lib/ytdlp-download";
 import { createDownloadToken } from "@/lib/download-token";
 import { unlink } from "fs/promises";
 
@@ -32,28 +32,26 @@ export async function GET(
     return Response.json({ error: "Yetkisiz" }, { status: 403 });
   }
 
-  // Aktif indirme ise metube'yi kontrol ederek durumu güncelle
-  if (
-    (download.status === "downloading" || download.status === "pending") &&
-    download.metubeId
-  ) {
-    const found = await metubeFindByUrl(download.metubeId, `${id}_`);
-    if (found?.item.status === "finished" && found.item.filename) {
+  // İndirme tamamlandıysa ama DB henüz güncellenmemişse güncelle
+  if (download.status === "downloading" || download.status === "pending") {
+    const prog = getProgress(id);
+    if (prog?.status === "finished" && prog.filename) {
       const expiryHours = parseInt(process.env.DOWNLOAD_EXPIRY_HOURS ?? "24");
       const expiresAt = new Date(Date.now() + expiryHours * 3600 * 1000);
       await db
         .update(downloads)
         .set({
           status: "completed",
-          title: found.item.title ?? null,
-          filePath: `/downloads/${found.item.filename}`,
+          title: prog.title ?? null,
+          filePath: prog.filename,
           expiresAt,
         })
         .where(eq(downloads.id, id));
       download.status = "completed";
-      download.title = found.item.title ?? null;
-      download.filePath = `/downloads/${found.item.filename}`;
+      download.title = prog.title ?? null;
+      download.filePath = prog.filename;
       download.expiresAt = expiresAt;
+      removeFromStore(id);
     }
   }
 
@@ -83,7 +81,6 @@ export async function DELETE(
       id: true,
       userId: true,
       status: true,
-      metubeId: true,
       filePath: true,
     },
   });
@@ -93,15 +90,8 @@ export async function DELETE(
     return Response.json({ error: "Yetkisiz" }, { status: 403 });
   }
 
-  // Aktif indirmeyi metube'den iptal et
-  if (
-    download.metubeId &&
-    (download.status === "downloading" || download.status === "pending")
-  ) {
-    const found = await metubeFindByUrl(download.metubeId, `${id}_`);
-    if (found && !found.inDone) {
-      await metubeDeleteFromQueue([found.key]);
-    }
+  if (download.status === "downloading" || download.status === "pending") {
+    cancelDownload(id);
   }
 
   // Dosyayı diskten sil
