@@ -137,6 +137,7 @@ export function startDownload(
     "--progress", "--newline",
     "--no-playlist",
     "--socket-timeout", "30",
+    "--js-runtimes", "node",
     url,
   ];
 
