@@ -89,7 +89,6 @@ export function SupportedSites() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="pl-8 h-8 text-sm"
-              autoFocus
             />
           </div>
 

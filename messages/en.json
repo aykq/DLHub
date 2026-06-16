@@ -72,6 +72,13 @@
   "signout": {
     "loading": "Signing out..."
   },
+  "profile": {
+    "back": "Home",
+    "theme": "Theme",
+    "language": "Language",
+    "adminPanel": "Admin Panel",
+    "signOut": "Sign out"
+  },
   "admin": {
     "title": "Admin Panel",
     "subtitle": "System management",

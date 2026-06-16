@@ -20,8 +20,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
-import { LanguageToggle } from "@/components/layout/LanguageToggle";
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export interface AdminUser {
   id: string;
@@ -299,8 +297,6 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
             <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} />
             {t("refresh")}
           </Button>
-          <LanguageToggle />
-          <ThemeToggle />
         </div>
       </div>
 

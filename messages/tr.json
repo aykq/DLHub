@@ -72,6 +72,13 @@
   "signout": {
     "loading": "Çıkış yapılıyor..."
   },
+  "profile": {
+    "back": "Ana Sayfa",
+    "theme": "Tema",
+    "language": "Dil",
+    "adminPanel": "Admin Paneli",
+    "signOut": "Çıkış Yap"
+  },
   "admin": {
     "title": "Admin Paneli",
     "subtitle": "Sistem yönetimi",
