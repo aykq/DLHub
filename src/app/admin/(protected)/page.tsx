@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users, downloads, settings } from "@/db/schema";
-import { desc, asc, eq, or } from "drizzle-orm";
+import { desc, asc, eq, gte, count } from "drizzle-orm";
 import { AdminDashboard, type AdminUser, type AdminDownload, type AdminStats } from "@/components/admin/AdminDashboard";
 import { PageTransitionWrapper } from "@/components/layout/PageTransitionWrapper";
 import { readdir, stat } from "fs/promises";
@@ -27,7 +27,10 @@ async function getDiskUsage(): Promise<number | null> {
 }
 
 export default async function AdminPage() {
-  const [allUsers, allDownloads, diskUsage, allSettings] = await Promise.all([
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+
+  const [allUsers, allDownloads, diskUsage, allSettings, todayDownloads] = await Promise.all([
     db
       .select({
         id: users.id,
@@ -61,6 +64,11 @@ export default async function AdminPage() {
       .limit(100),
     getDiskUsage(),
     db.select().from(settings),
+    db
+      .select({ userId: downloads.userId, total: count() })
+      .from(downloads)
+      .where(gte(downloads.createdAt, todayStart))
+      .groupBy(downloads.userId),
   ]);
 
   const pendingCount = allUsers.filter((u) => u.status === "pending").length;
@@ -69,6 +77,8 @@ export default async function AdminPage() {
   ).length;
 
   const settingsMap = Object.fromEntries(allSettings.map((s) => [s.key, s.value]));
+  const dailyLimit = parseInt(settingsMap.daily_download_limit ?? "0", 10) || 0;
+  const todayMap = new Map(todayDownloads.map((r) => [r.userId, r.total]));
 
   const stats: AdminStats = {
     totalUsers: allUsers.length,
@@ -82,6 +92,8 @@ export default async function AdminPage() {
   const initialUsers: AdminUser[] = allUsers.map((u) => ({
     ...u,
     createdAt: u.createdAt.toISOString(),
+    todayCount: todayMap.get(u.id) ?? 0,
+    dailyLimit,
   }));
 
   const initialDownloads: AdminDownload[] = allDownloads.map((dl) => ({

@@ -29,6 +29,8 @@ export interface AdminUser {
   status: string;
   role: string;
   createdAt: string;
+  todayCount: number;
+  dailyLimit: number;
 }
 
 export interface AdminDownload {
@@ -409,6 +411,20 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                       <ShieldCheck className="size-3.5 text-primary shrink-0" />
                     )}
                     <StatusBadge status={u.status} />
+                    {u.dailyLimit > 0 && (
+                      <span
+                        className={cn(
+                          "text-[0.65rem] px-1.5 py-0.5 rounded font-medium",
+                          u.todayCount >= u.dailyLimit
+                            ? "bg-destructive/15 text-destructive"
+                            : u.todayCount >= Math.ceil(u.dailyLimit * 0.8)
+                            ? "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400"
+                            : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {u.todayCount}/{u.dailyLimit}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">{u.email}</p>
                 </div>
