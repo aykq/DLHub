@@ -8,6 +8,9 @@ interface RawFormat {
   height: number | null;
   vcodec: string;
   acodec: string;
+  filesize?: number | null;
+  filesize_approx?: number | null;
+  tbr?: number | null;
 }
 
 interface RawInfo {
@@ -17,12 +20,19 @@ interface RawInfo {
   formats: RawFormat[];
 }
 
+export interface FormatVariant {
+  codec: string;
+  filesize: number | null;
+  tbr: number | null;
+}
+
 export interface VideoFormat {
   id: string;
   label: string;
   quality: string;
   format: string;
   height: number | null;
+  variants: FormatVariant[];
 }
 
 const HEIGHT_LABELS: Record<number, string> = {
@@ -36,6 +46,18 @@ const HEIGHT_LABELS: Record<number, string> = {
   240: "240p",
   144: "144p",
 };
+
+const CODEC_ORDER = ["AV1", "VP9", "AVC", "HEVC", "VP8"];
+
+function codecName(vcodec: string): string {
+  if (!vcodec || vcodec === "none") return "Other";
+  if (vcodec.startsWith("av01")) return "AV1";
+  if (vcodec.startsWith("vp09") || vcodec.startsWith("vp9")) return "VP9";
+  if (vcodec.startsWith("avc1") || vcodec.startsWith("h264")) return "AVC";
+  if (vcodec.startsWith("hev1") || vcodec.startsWith("hvc1")) return "HEVC";
+  if (vcodec.startsWith("vp08") || vcodec.startsWith("vp8")) return "VP8";
+  return vcodec.split(".")[0].toUpperCase();
+}
 
 export async function getVideoInfo(url: string): Promise<{
   formats: VideoFormat[];
@@ -51,22 +73,44 @@ export async function getVideoInfo(url: string): Promise<{
 
   const info = JSON.parse(stdout) as RawInfo;
 
-  const heights = new Set<number>();
+  // height → codec → en iyi (en büyük boyutlu) varyant
+  const heightMap = new Map<number, Map<string, FormatVariant>>();
+
   for (const fmt of info.formats ?? []) {
-    if (fmt.vcodec && fmt.vcodec !== "none" && fmt.height && fmt.height > 0) {
-      heights.add(fmt.height);
+    if (!fmt.vcodec || fmt.vcodec === "none") continue;
+    if (!fmt.height || fmt.height <= 0) continue;
+
+    const codec = codecName(fmt.vcodec);
+    const filesize = fmt.filesize ?? fmt.filesize_approx ?? null;
+    const tbr = fmt.tbr ?? null;
+
+    if (!heightMap.has(fmt.height)) heightMap.set(fmt.height, new Map());
+    const codecMap = heightMap.get(fmt.height)!;
+
+    const existing = codecMap.get(codec);
+    if (!existing || (filesize && (!existing.filesize || filesize > existing.filesize))) {
+      codecMap.set(codec, { codec, filesize, tbr });
     }
   }
 
-  const sorted = Array.from(heights).sort((a, b) => b - a);
+  const sorted = Array.from(heightMap.keys()).sort((a, b) => b - a);
 
-  const formats: VideoFormat[] = sorted.map((h) => ({
-    id: `${h}_mp4`,
-    label: HEIGHT_LABELS[h] ? `${HEIGHT_LABELS[h]} — MP4` : `${h}p — MP4`,
-    quality: String(h),
-    format: "mp4",
-    height: h,
-  }));
+  const formats: VideoFormat[] = sorted.map((h) => {
+    const codecMap = heightMap.get(h)!;
+    const variants = Array.from(codecMap.values()).sort(
+      (a, b) =>
+        (CODEC_ORDER.indexOf(a.codec) + 1 || 99) -
+        (CODEC_ORDER.indexOf(b.codec) + 1 || 99)
+    );
+    return {
+      id: `${h}_mp4`,
+      label: HEIGHT_LABELS[h] ? `${HEIGHT_LABELS[h]} — MP4` : `${h}p — MP4`,
+      quality: String(h),
+      format: "mp4",
+      height: h,
+      variants,
+    };
+  });
 
   formats.push({
     id: "0_mp3",
@@ -74,6 +118,7 @@ export async function getVideoInfo(url: string): Promise<{
     quality: "0",
     format: "mp3",
     height: null,
+    variants: [],
   });
 
   return {

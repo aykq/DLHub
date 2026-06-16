@@ -8,12 +8,19 @@ import { cn } from "@/lib/utils";
 import { SupportedSites } from "./SupportedSites";
 import { useTranslations } from "next-intl";
 
+interface FormatVariant {
+  codec: string;
+  filesize: number | null;
+  tbr: number | null;
+}
+
 interface VideoFormat {
   id: string;
   label: string;
   quality: string;
   format: string;
   height: number | null;
+  variants: FormatVariant[];
 }
 
 interface VideoInfo {
@@ -34,6 +41,12 @@ type Phase =
 interface Props {
   activeDownloadId?: string | null;
   activeDownloadTitle?: string | null;
+}
+
+function fmtBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(0)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
 function fmtDuration(sec: number): string {
@@ -245,20 +258,40 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
           )}
 
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {phase.info.formats.map((fmt) => (
-              <button
-                key={fmt.id}
-                onClick={() => setSelectedFormat(fmt.id === selectedFormat ? null : fmt.id)}
-                className={cn(
-                  "rounded-lg border px-3 py-2.5 text-left text-sm transition-colors cursor-pointer",
-                  selectedFormat === fmt.id
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background hover:bg-muted"
-                )}
-              >
-                {fmt.label}
-              </button>
-            ))}
+            {phase.info.formats.map((fmt) => {
+              const isSelected = selectedFormat === fmt.id;
+              return (
+                <button
+                  key={fmt.id}
+                  onClick={() => setSelectedFormat(isSelected ? null : fmt.id)}
+                  className={cn(
+                    "rounded-lg border px-3 py-2.5 text-left transition-colors cursor-pointer",
+                    isSelected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:bg-muted"
+                  )}
+                >
+                  <span className="text-sm font-medium block">{fmt.label}</span>
+                  {fmt.variants.length > 0 && (
+                    <span className="mt-1.5 flex flex-wrap gap-1">
+                      {fmt.variants.map((v) => (
+                        <span
+                          key={v.codec}
+                          className={cn(
+                            "text-[0.62rem] px-1.5 py-0.5 rounded font-medium",
+                            isSelected
+                              ? "bg-white/20 text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {v.codec}{v.filesize ? ` ${fmtBytes(v.filesize)}` : ""}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           <Button
