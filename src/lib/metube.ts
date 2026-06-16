@@ -13,6 +13,12 @@ export interface MetubeItem {
   timestamp: number;
 }
 
+interface MetubeHistoryResponse {
+  done: MetubeItem[];
+  queue: MetubeItem[];
+  pending: MetubeItem[];
+}
+
 export async function metubeAdd(
   url: string,
   quality: string,
@@ -40,23 +46,13 @@ export async function metubeAdd(
   }
 }
 
-export async function metubeQueue(): Promise<Record<string, MetubeItem>> {
+async function metubeHistory(): Promise<MetubeHistoryResponse> {
   try {
-    const res = await fetch(`${METUBE_URL}/queue`, { cache: "no-store" });
-    if (!res.ok) return {};
-    return res.json();
+    const res = await fetch(`${METUBE_URL}/history`, { cache: "no-store" });
+    if (!res.ok) return { done: [], queue: [], pending: [] };
+    return res.json() as Promise<MetubeHistoryResponse>;
   } catch {
-    return {};
-  }
-}
-
-export async function metubeDone(): Promise<Record<string, MetubeItem>> {
-  try {
-    const res = await fetch(`${METUBE_URL}/done`, { cache: "no-store" });
-    if (!res.ok) return {};
-    return res.json();
-  } catch {
-    return {};
+    return { done: [], queue: [], pending: [] };
   }
 }
 
@@ -64,17 +60,21 @@ export async function metubeFindByUrl(
   url: string,
   downloadIdPrefix?: string
 ): Promise<{ key: string; item: MetubeItem; inDone: boolean } | null> {
-  const [queue, done] = await Promise.all([metubeQueue(), metubeDone()]);
+  const history = await metubeHistory();
 
-  for (const [key, item] of Object.entries(queue)) {
+  const toList = (v: unknown): MetubeItem[] =>
+    Array.isArray(v) ? (v as MetubeItem[]) : Object.values((v ?? {}) as Record<string, MetubeItem>);
+
+  const candidates: Array<{ item: MetubeItem; inDone: boolean }> = [
+    ...toList(history.queue).map(item => ({ item, inDone: false })),
+    ...toList(history.pending).map(item => ({ item, inDone: false })),
+    ...toList(history.done).map(item => ({ item, inDone: true })),
+  ];
+
+  for (const { item, inDone } of candidates) {
     if (item.url !== url) continue;
     if (downloadIdPrefix && item.filename && !item.filename.startsWith(downloadIdPrefix)) continue;
-    return { key, item, inDone: false };
-  }
-  for (const [key, item] of Object.entries(done)) {
-    if (item.url !== url) continue;
-    if (downloadIdPrefix && item.filename && !item.filename.startsWith(downloadIdPrefix)) continue;
-    return { key, item, inDone: true };
+    return { key: item.url, item, inDone };
   }
   return null;
 }
