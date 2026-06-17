@@ -9,7 +9,7 @@ import { createNotification, broadcastNotification } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
-const POLL_INTERVAL_MS = 2000;
+const POLL_INTERVAL_MS = 1000;
 const KEEPALIVE_INTERVAL_MS = 25_000;
 
 export async function GET(
@@ -146,6 +146,11 @@ export async function GET(
               filePath: filePath ?? null,
               fileSize,
               expiresAt,
+              duration: prog.duration ?? null,
+              videoCodec: prog.videoCodec ?? null,
+              audioCodec: prog.audioCodec ?? null,
+              width: prog.width ?? null,
+              height: prog.height ?? null,
             }).where(eq(downloads.id, id));
 
             const token = createDownloadToken(id, expiresAt);

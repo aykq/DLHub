@@ -2,6 +2,7 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { db } from "@/db";
 import { downloads, users } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
+import { createDownloadToken } from "@/lib/download-token";
 
 export async function GET() {
   const adminId = await requireAdmin();
@@ -22,17 +23,27 @@ export async function GET() {
       userId: downloads.userId,
       userName: users.name,
       userEmail: users.email,
+      duration: downloads.duration,
+      videoCodec: downloads.videoCodec,
+      audioCodec: downloads.audioCodec,
+      width: downloads.width,
+      height: downloads.height,
     })
     .from(downloads)
     .leftJoin(users, eq(downloads.userId, users.id))
     .orderBy(desc(downloads.createdAt))
     .limit(100);
 
+  const now = new Date();
   return Response.json(
     rows.map((dl) => ({
       ...dl,
       createdAt: dl.createdAt.toISOString(),
       expiresAt: dl.expiresAt?.toISOString() ?? null,
+      token:
+        dl.status === "completed" && dl.expiresAt && dl.expiresAt > now
+          ? createDownloadToken(dl.id, dl.expiresAt)
+          : null,
     }))
   );
 }

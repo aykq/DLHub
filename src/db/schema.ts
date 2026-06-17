@@ -80,6 +80,11 @@ export const downloads = pgTable("download", {
   expiresAt: timestamp("expires_at", { mode: "date" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   errorMessage: text("error_message"),
+  duration: integer("duration"),
+  videoCodec: text("video_codec"),
+  audioCodec: text("audio_codec"),
+  width: integer("width"),
+  height: integer("height"),
 });
 
 export const settings = pgTable("setting", {

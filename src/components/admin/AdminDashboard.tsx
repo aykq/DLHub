@@ -46,6 +46,12 @@ export interface AdminDownload {
   userId: string;
   userName: string | null;
   userEmail: string | null;
+  token?: string | null;
+  duration?: number | null;
+  videoCodec?: string | null;
+  audioCodec?: string | null;
+  width?: number | null;
+  height?: number | null;
 }
 
 export interface AdminStats {
@@ -88,13 +94,25 @@ function timeAgo(dateStr: string, t: TFn): string {
   return t("timeDay", { count: Math.floor(h / 24) });
 }
 
+const VCODEC_NAMES: Record<string, string> = { av01: "AV1", vp09: "VP9", avc1: "H.264", hev1: "HEVC", vp08: "VP8" };
+
 function formatLabel(id: string): string {
-  const match = id.match(/^(\d+|best)_(mp4|mp3|mkv|webm)$/);
+  const match = id.match(/^(\d+|best)_(mp4|mp3|mkv|webm)(?:_(av01|vp09|avc1|hev1|vp08))?(?:_(aac|opus))?$/);
   if (!match) return id;
-  const [, quality, ext] = match;
+  const [, quality, ext, vcodec, acodec] = match;
   if (ext === "mp3") return "MP3";
-  if (quality === "best") return "MP4";
-  return `${quality}p`;
+  const parts: string[] = [quality === "best" ? "Best" : `${quality}p`, ext.toUpperCase()];
+  if (vcodec) parts.push(VCODEC_NAMES[vcodec] ?? vcodec.toUpperCase());
+  if (acodec) parts.push(acodec.toUpperCase());
+  return parts.join(" · ");
+}
+
+function fmtDuration(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function hostOf(url: string): string {
@@ -569,6 +587,8 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
             {dlList.map((dl) => {
               const isActive = dl.status === "downloading" || dl.status === "pending";
               const canDelete = dl.status !== "expired";
+              const canDownload = dl.status === "completed" && !!dl.token &&
+                dl.expiresAt && new Date(dl.expiresAt) > new Date();
               return (
                 <li
                   key={dl.id}
@@ -594,6 +614,29 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                       <span className="opacity-40">·</span>
                       <span>{timeAgo(dl.createdAt, t)}</span>
                     </p>
+                    {(dl.width || dl.duration || dl.videoCodec) && (
+                      <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        {dl.width && dl.height && <span>{dl.width}×{dl.height}</span>}
+                        {dl.duration && (
+                          <>
+                            {(dl.width || dl.height) && <span className="opacity-40">·</span>}
+                            <span>{fmtDuration(dl.duration)}</span>
+                          </>
+                        )}
+                        {dl.videoCodec && (
+                          <>
+                            {(dl.width || dl.duration) && <span className="opacity-40">·</span>}
+                            <span>{dl.videoCodec.toUpperCase()}</span>
+                          </>
+                        )}
+                        {dl.audioCodec && (
+                          <>
+                            <span className="opacity-40">·</span>
+                            <span>{dl.audioCodec.toUpperCase()}</span>
+                          </>
+                        )}
+                      </p>
+                    )}
                     {dl.status === "error" && dl.errorMessage && (
                       <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                         <AlertCircle className="size-3 shrink-0" />
@@ -606,6 +649,13 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                       <span className="flex items-center gap-1 text-xs text-muted-foreground mr-1">
                         <Loader2 className="size-3.5 animate-spin" />
                       </span>
+                    )}
+                    {canDownload && (
+                      <a href={`/api/downloads/${dl.id}/file?token=${dl.token}`}>
+                        <Button size="icon-sm" variant="ghost" title={t("titleDownload")}>
+                          <Download className="size-3.5 text-muted-foreground hover:text-primary" />
+                        </Button>
+                      </a>
                     )}
                     {canDelete && (
                       <Button

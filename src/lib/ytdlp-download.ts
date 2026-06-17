@@ -1,6 +1,9 @@
-import { spawn, type ChildProcess } from "child_process";
+import { spawn, execFile, type ChildProcess } from "child_process";
 import { readdir, stat } from "fs/promises";
 import path from "path";
+import { promisify } from "util";
+
+const execFileAsync = promisify(execFile);
 
 const DOWNLOADS_PATH = process.env.DOWNLOADS_PATH ?? "/downloads";
 
@@ -12,6 +15,11 @@ export interface DownloadProgress {
   title: string | null;
   filename: string | null;
   error: string | null;
+  duration: number | null;
+  videoCodec: string | null;
+  audioCodec: string | null;
+  width: number | null;
+  height: number | null;
 }
 
 interface DownloadEntry extends DownloadProgress {
@@ -109,6 +117,42 @@ function parseLine(downloadId: string, line: string): void {
   }
 }
 
+interface FfprobeOutput {
+  streams?: Array<{
+    codec_type?: string;
+    codec_name?: string;
+    width?: number;
+    height?: number;
+    duration?: string;
+  }>;
+  format?: { duration?: string };
+}
+
+async function extractMetadata(filePath: string): Promise<Pick<DownloadProgress, "duration" | "videoCodec" | "audioCodec" | "width" | "height">> {
+  try {
+    const { stdout } = await execFileAsync("ffprobe", [
+      "-v", "quiet",
+      "-print_format", "json",
+      "-show_streams",
+      "-show_format",
+      filePath,
+    ]);
+    const data = JSON.parse(stdout) as FfprobeOutput;
+    const videoStream = data.streams?.find((s) => s.codec_type === "video");
+    const audioStream = data.streams?.find((s) => s.codec_type === "audio");
+    const rawDuration = data.format?.duration ?? videoStream?.duration ?? audioStream?.duration;
+    return {
+      duration: rawDuration ? Math.round(parseFloat(rawDuration)) : null,
+      videoCodec: videoStream?.codec_name ?? null,
+      audioCodec: audioStream?.codec_name ?? null,
+      width: videoStream?.width ?? null,
+      height: videoStream?.height ?? null,
+    };
+  } catch {
+    return { duration: null, videoCodec: null, audioCodec: null, width: null, height: null };
+  }
+}
+
 export function startDownload(
   downloadId: string,
   url: string,
@@ -125,6 +169,11 @@ export function startDownload(
     title: null,
     filename: null,
     error: null,
+    duration: null,
+    videoCodec: null,
+    audioCodec: null,
+    width: null,
+    height: null,
     process: null,
   };
   progressStore.set(downloadId, entry);
@@ -173,6 +222,14 @@ export function startDownload(
         if (file) e.filename = path.join(DOWNLOADS_PATH, file);
       } catch { /* ignore */ }
       if (!e.title && e.filename) e.title = titleFromPath(downloadId, e.filename);
+      if (e.filename) {
+        const meta = await extractMetadata(e.filename);
+        e.duration = meta.duration;
+        e.videoCodec = meta.videoCodec;
+        e.audioCodec = meta.audioCodec;
+        e.width = meta.width;
+        e.height = meta.height;
+      }
       e.status = "finished";
     } else {
       e.status = "error";

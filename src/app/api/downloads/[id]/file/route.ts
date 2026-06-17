@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { downloads } from "@/db/schema";
+import { downloads, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { verifyDownloadToken } from "@/lib/download-token";
 import { createReadStream } from "fs";
@@ -50,7 +50,11 @@ export async function GET(
   }
 
   if (download.userId !== session.user.id) {
-    return new Response("Yetkisiz", { status: 403 });
+    const dbUser = await db.query.users.findFirst({
+      where: eq(users.id, session.user.id),
+      columns: { role: true },
+    });
+    if (dbUser?.role !== "admin") return new Response("Yetkisiz", { status: 403 });
   }
 
   let fileStat: Awaited<ReturnType<typeof stat>>;
