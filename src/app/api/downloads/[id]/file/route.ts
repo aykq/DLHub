@@ -70,11 +70,12 @@ export async function GET(
     .replace(/[<>:"/\\|?*\x00-\x1f]/g, "")
     .trim()
     .slice(0, 100) || "download";
-  const downloadFilename = `${safeTitle}${ext}`;
-  const encodedFilename = encodeURIComponent(downloadFilename);
+  // filename= param must be Latin-1 (≤255); strip non-ASCII for the fallback
+  const asciiTitle = safeTitle.replace(/[^\x00-\x7F]/g, "").trim() || "download";
+  const encodedFilename = encodeURIComponent(`${safeTitle}${ext}`);
 
   const contentDisposition =
-    `attachment; filename="${downloadFilename}"; filename*=UTF-8''${encodedFilename}`;
+    `attachment; filename="${asciiTitle}${ext}"; filename*=UTF-8''${encodedFilename}`;
 
   const rangeHeader = req.headers.get("range");
 
