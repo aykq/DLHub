@@ -454,6 +454,23 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                       </span>
                     )}
                   </div>
+                  {u.dailyLimit > 0 && (
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-[width]",
+                            u.todayCount >= u.dailyLimit
+                              ? "bg-destructive"
+                              : u.todayCount >= Math.ceil(u.dailyLimit * 0.8)
+                              ? "bg-yellow-500"
+                              : "bg-primary"
+                          )}
+                          style={{ width: `${Math.min(100, (u.todayCount / u.dailyLimit) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">{u.email}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">

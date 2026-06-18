@@ -357,7 +357,9 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
                               : "border-border bg-background hover:bg-muted"
                           )}
                         >
-                          {v.codec}{v.filesize ? ` · ${fmtBytes(v.filesize)}` : ""}
+                          {v.codec}
+                          {v.filesize ? ` · ${fmtBytes(v.filesize)}` : ""}
+                          {v.tbr ? ` · ${v.tbr < 1000 ? `${Math.round(v.tbr)} kbps` : `${(v.tbr / 1000).toFixed(1)} Mbps`}` : ""}
                         </button>
                       ))}
                     </div>
