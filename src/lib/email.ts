@@ -15,8 +15,7 @@ function transport() {
 const from = () => `DLHub <${process.env.EMAIL_USER ?? ""}>`;
 const appUrl = () => process.env.NEXTAUTH_URL ?? "https://dlhub.aykq.org.tr";
 
-const FILMSTRIP_PERF = `<span style="display:inline-block;width:10px;height:14px;background:#ffffff;border-radius:3px;margin:0 8px;opacity:0.9"></span>`;
-const FILMSTRIP = `<div style="background:#0a0a0a;padding:10px 16px;line-height:0;font-size:0">${FILMSTRIP_PERF.repeat(15)}</div>`;
+const GRADIENT_STRIPE = `<div style="height:5px;background:linear-gradient(to right,#2563eb,#7c3aed)"></div>`;
 
 function buildEmailHtml(heading: string, body: string, buttonText: string, buttonUrl: string, footerNote: string): string {
   return `<!DOCTYPE html>
@@ -26,8 +25,8 @@ function buildEmailHtml(heading: string, body: string, buttonText: string, butto
   <div style="padding:40px 16px">
     <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08)">
 
-      <!-- Filmstrip -->
-      ${FILMSTRIP}
+      <!-- Accent -->
+      ${GRADIENT_STRIPE}
 
       <!-- Header -->
       <div style="background:#0f172a;padding:28px 32px">

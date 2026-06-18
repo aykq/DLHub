@@ -60,7 +60,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
   <div style="padding:40px 16px">
     <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08)">
-      <div style="background:#0a0a0a;padding:10px 16px;line-height:0;font-size:0">${'<span style="display:inline-block;width:10px;height:14px;background:#ffffff;border-radius:3px;margin:0 8px;opacity:0.9"></span>'.repeat(15)}</div>
+      <div style="height:5px;background:linear-gradient(to right,#2563eb,#7c3aed)"></div>
       <div style="background:#0f172a;padding:28px 32px">
         <div style="font-size:22px;font-weight:900;color:#ffffff;letter-spacing:-0.5px">DLHub</div>
         <div style="font-size:12px;color:#94a3b8;margin-top:3px">Video indirme platformu</div>
