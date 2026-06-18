@@ -105,7 +105,7 @@ export default async function AdminPage() {
   return (
     <main className="flex-1 w-full">
       <PageTransitionWrapper>
-      <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+      <div className="mx-auto max-w-2xl px-4 py-8 space-y-6">
         <AdminDashboard
           initialStats={stats}
           initialUsers={initialUsers}

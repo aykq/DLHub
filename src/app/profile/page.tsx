@@ -21,7 +21,7 @@ export default async function ProfilePage() {
   return (
     <main className="flex-1 w-full">
       <PageTransitionWrapper>
-        <div className="mx-auto max-w-3xl px-4 py-8">
+        <div className="mx-auto max-w-2xl px-4 py-8">
           <ProfileClient
             user={{
               name: session.user.name,

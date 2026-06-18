@@ -1,5 +1,8 @@
 import { auth } from "@/lib/auth";
-import { Download } from "lucide-react";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { Download, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 
 interface NavbarProps {
@@ -7,7 +10,7 @@ interface NavbarProps {
   extraActions?: React.ReactNode;
 }
 
-export async function Navbar({ maxWidth = "max-w-3xl", extraActions }: NavbarProps) {
+export async function Navbar({ maxWidth = "max-w-2xl", extraActions }: NavbarProps) {
   const session = await auth();
 
   const userImage = session?.user?.image;
@@ -20,6 +23,15 @@ export async function Navbar({ maxWidth = "max-w-3xl", extraActions }: NavbarPro
       .toUpperCase()
       .slice(0, 2) || "?";
 
+  let isAdmin = false;
+  if (session?.user?.id) {
+    const dbUser = await db.query.users.findFirst({
+      where: eq(users.id, session.user.id),
+      columns: { role: true },
+    });
+    isAdmin = dbUser?.role === "admin";
+  }
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className={`mx-auto ${maxWidth} px-4 h-14 flex items-center justify-between`}>
@@ -30,6 +42,15 @@ export async function Navbar({ maxWidth = "max-w-3xl", extraActions }: NavbarPro
 
         <div className="flex items-center gap-2">
           {extraActions}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              aria-label="Admin Paneli"
+              className="flex items-center justify-center size-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <LayoutDashboard className="size-4" />
+            </Link>
+          )}
           {session?.user && (
             <Link href="/profile" aria-label="Profil">
               {userImage ? (

@@ -56,7 +56,7 @@ export default async function HomePage() {
       <StatusMonitor />
       <main className="flex-1 w-full">
         <PageTransitionWrapper>
-          <div className="mx-auto max-w-3xl px-4 py-8 space-y-4">
+          <div className="mx-auto max-w-2xl px-4 py-8 space-y-4">
             <DownloadForm
               activeDownloadId={activeDownload?.id ?? null}
               activeDownloadTitle={activeDownload?.title ?? null}
