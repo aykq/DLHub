@@ -15,8 +15,8 @@ function transport() {
 const from = () => `DLHub <${process.env.EMAIL_USER ?? ""}>`;
 const appUrl = () => process.env.NEXTAUTH_URL ?? "https://dlhub.aykq.org.tr";
 
-const FILMSTRIP_DOT = `<span style="display:inline-block;width:8px;height:8px;background:#ffffff;border-radius:50%;margin:0 4px;opacity:0.8"></span>`;
-const FILMSTRIP = `<div style="background:#0a0a0a;padding:8px 10px;line-height:0;font-size:0">${FILMSTRIP_DOT.repeat(30)}</div>`;
+const FILMSTRIP_PERF = `<span style="display:inline-block;width:10px;height:14px;background:#ffffff;border-radius:3px;margin:0 8px;opacity:0.9"></span>`;
+const FILMSTRIP = `<div style="background:#0a0a0a;padding:10px 16px;line-height:0;font-size:0">${FILMSTRIP_PERF.repeat(15)}</div>`;
 
 function buildEmailHtml(heading: string, body: string, buttonText: string, buttonUrl: string, footerNote: string): string {
   return `<!DOCTYPE html>
