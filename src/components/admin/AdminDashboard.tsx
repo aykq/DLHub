@@ -66,6 +66,7 @@ export interface AdminStats {
 export interface AdminSettings {
   daily_download_limit: string;
   whitelist_domains: string;
+  download_expiry_hours: string;
 }
 
 interface Props {
@@ -712,6 +713,20 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                 setSettingsForm((prev) => ({ ...prev, whitelist_domains: e.target.value }))
               }
               className="h-8 text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              {t("expiryHoursLabel")}
+            </label>
+            <Input
+              type="number"
+              min="1"
+              value={settingsForm.download_expiry_hours}
+              onChange={(e) =>
+                setSettingsForm((prev) => ({ ...prev, download_expiry_hours: e.target.value }))
+              }
+              className="h-8 w-32 text-sm"
             />
           </div>
           <div className="flex items-center gap-3">

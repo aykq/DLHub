@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { getProgress, removeFromStore, cancelDownload } from "@/lib/ytdlp-download";
 import { createDownloadToken } from "@/lib/download-token";
 import { unlink } from "fs/promises";
+import { getSetting } from "@/lib/settings";
 
 async function requireAccess(downloadUserId: string, sessionUserId: string): Promise<boolean> {
   if (downloadUserId === sessionUserId) return true;
@@ -36,7 +37,7 @@ export async function GET(
   if (download.status === "downloading" || download.status === "pending") {
     const prog = getProgress(id);
     if (prog?.status === "finished" && prog.filename) {
-      const expiryHours = parseInt(process.env.DOWNLOAD_EXPIRY_HOURS ?? "24");
+      const expiryHours = parseInt(await getSetting("download_expiry_hours"));
       const expiresAt = new Date(Date.now() + expiryHours * 3600 * 1000);
       await db
         .update(downloads)

@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 const DEFAULTS: Record<string, string> = {
   daily_download_limit: "10",
   whitelist_domains: "",
+  download_expiry_hours: "24",
 };
 
 export async function getSetting(key: string): Promise<string> {

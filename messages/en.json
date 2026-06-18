@@ -113,6 +113,7 @@
     "settingsSection": "Settings",
     "dailyLimitLabel": "Daily download limit (per user, 0 = unlimited)",
     "whitelistLabel": "Allowed domains (comma-separated, empty = all)",
+    "expiryHoursLabel": "File retention (hours)",
     "save": "Save",
     "saved": "Saved",
     "statusPending": "Pending",

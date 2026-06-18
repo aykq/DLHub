@@ -6,6 +6,7 @@ import { getProgress, removeFromStore, getFileSize } from "@/lib/ytdlp-download"
 import { createDownloadToken } from "@/lib/download-token";
 import { sendDownloadCompleteDiscordNotification } from "@/lib/discord";
 import { createNotification, broadcastNotification } from "@/lib/notifications";
+import { getSetting } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -136,7 +137,7 @@ export async function GET(
             }
 
             const filePath = prog.filename ?? null;
-            const expiryHours = parseInt(process.env.DOWNLOAD_EXPIRY_HOURS ?? "24");
+            const expiryHours = parseInt(await getSetting("download_expiry_hours"));
             const expiresAt = new Date(Date.now() + expiryHours * 3600 * 1000);
             const fileSize = filePath ? await getFileSize(filePath) : null;
 

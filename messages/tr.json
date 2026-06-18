@@ -113,6 +113,7 @@
     "settingsSection": "Ayarlar",
     "dailyLimitLabel": "Günlük indirme limiti (kullanıcı başına, 0 = sınırsız)",
     "whitelistLabel": "İzin verilen domainler (virgülle ayır, boş = hepsi)",
+    "expiryHoursLabel": "Dosya saklama süresi (saat)",
     "save": "Kaydet",
     "saved": "Kaydedildi",
     "statusPending": "Bekliyor",

@@ -113,6 +113,7 @@ export default async function AdminPage() {
           initialSettings={{
             daily_download_limit: settingsMap.daily_download_limit ?? "10",
             whitelist_domains: settingsMap.whitelist_domains ?? "",
+            download_expiry_hours: settingsMap.download_expiry_hours ?? "24",
           }}
         />
       </div>

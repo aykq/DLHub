@@ -7,20 +7,23 @@ import { type NextRequest } from "next/server";
 const DEFAULTS: Record<string, string> = {
   daily_download_limit: "10",
   whitelist_domains: "",
+  download_expiry_hours: "24",
 };
 
 export async function GET() {
   const adminId = await requireAdmin();
   if (!adminId) return Response.json({ error: "Forbidden" }, { status: 403 });
 
-  const [limitRow, whitelistRow] = await Promise.all([
+  const [limitRow, whitelistRow, expiryRow] = await Promise.all([
     db.query.settings.findFirst({ where: eq(settings.key, "daily_download_limit") }),
     db.query.settings.findFirst({ where: eq(settings.key, "whitelist_domains") }),
+    db.query.settings.findFirst({ where: eq(settings.key, "download_expiry_hours") }),
   ]);
 
   return Response.json({
     daily_download_limit: limitRow?.value ?? DEFAULTS.daily_download_limit,
     whitelist_domains: whitelistRow?.value ?? DEFAULTS.whitelist_domains,
+    download_expiry_hours: expiryRow?.value ?? DEFAULTS.download_expiry_hours,
   });
 }
 
@@ -29,7 +32,7 @@ export async function PATCH(req: NextRequest) {
   if (!adminId) return Response.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json() as Record<string, string>;
-  const allowed = ["daily_download_limit", "whitelist_domains"];
+  const allowed = ["daily_download_limit", "whitelist_domains", "download_expiry_hours"];
 
   for (const key of allowed) {
     if (key in body) {
