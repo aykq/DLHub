@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { RefreshCw, Download, Loader2, AlertCircle, Clock, Search, X } from "lucide-react";
+import { RefreshCw, Download, Loader2, AlertCircle, Clock, Search, X, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -28,14 +28,17 @@ interface Props {
   initialDownloads: DownloadRecord[];
 }
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "az önce";
-  if (m < 60) return `${m}dk`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}s`;
-  return `${Math.floor(h / 24)}g`;
+function fmtDateTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+  const time = date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  if (isToday) return `Bugün, ${time}`;
+  if (isYesterday) return `Dün, ${time}`;
+  return date.toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" }) + `, ${time}`;
 }
 
 const VCODEC_NAMES: Record<string, string> = { av01: "AV1", vp09: "VP9", avc1: "H.264", hev1: "HEVC", vp08: "VP8" };
@@ -193,7 +196,17 @@ export function DownloadHistory({ initialDownloads }: Props) {
                     </>
                   )}
                   <span className="opacity-40">·</span>
-                  <span>{timeAgo(dl.createdAt)}</span>
+                  <a
+                    href={dl.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors"
+                  >
+                    {hostOf(dl.url)}
+                    <ExternalLink className="size-2.5 opacity-60" />
+                  </a>
+                  <span className="opacity-40">·</span>
+                  <span>{fmtDateTime(dl.createdAt)}</span>
                 </p>
                 {(dl.width || dl.duration || dl.videoCodec) && (
                   <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5 flex-wrap">
