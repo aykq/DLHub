@@ -57,21 +57,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const html = `<!DOCTYPE html>
 <html lang="tr">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f5c518;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
   <div style="padding:40px 16px">
-    <div style="max-width:520px;margin:0 auto;background:#0f0f0f;border-radius:12px;overflow:hidden">
-      <div style="padding:28px 32px 0">
-        <div style="font-size:21px;font-weight:900;color:#f5c518;letter-spacing:-0.5px">DLHub</div>
-        <div style="font-size:11px;color:#52525b;margin-top:3px;text-transform:uppercase;letter-spacing:0.07em">Video indirme platformu</div>
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08)">
+      <div style="height:5px;background:linear-gradient(to right,#2563eb,#7c3aed)"></div>
+      <div style="background:#0f172a;padding:28px 32px">
+        <div style="font-size:22px;font-weight:900;color:#ffffff;letter-spacing:-0.5px">DLHub</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:3px">Video indirme platformu</div>
       </div>
-      <div style="margin:20px 32px 0;height:1px;background:#1f1f1f"></div>
-      <div style="padding:24px 32px 32px">
-        <h2 style="font-size:20px;font-weight:700;color:#ffffff;margin:0 0 12px;line-height:1.3">${heading}</h2>
-        <p style="font-size:14px;color:#a1a1aa;line-height:1.7;margin:0 0 28px">${body}</p>
-        <a href="${url}" style="display:inline-block;background:#f5c518;color:#0f0f0f;padding:13px 28px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:700;letter-spacing:0.01em">Giriş Yap</a>
+      <div style="padding:36px 32px">
+        <h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 12px;line-height:1.3">${heading}</h2>
+        <p style="font-size:14px;color:#475569;line-height:1.7;margin:0 0 32px">${body}</p>
+        <a href="${url}" style="display:inline-block;background:#0f172a;color:#ffffff;padding:13px 28px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;letter-spacing:0.01em">Giriş Yap</a>
       </div>
-      <div style="padding:16px 32px 24px;border-top:1px solid #1f1f1f">
-        <p style="font-size:11px;color:#52525b;margin:0;line-height:1.6">${footerNote}</p>
+      <div style="padding:20px 32px;border-top:1px solid #f1f5f9">
+        <p style="font-size:11px;color:#94a3b8;margin:0;line-height:1.6">${footerNote}</p>
       </div>
     </div>
   </div>
