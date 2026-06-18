@@ -126,6 +126,9 @@
     "timeNow": "az önce",
     "timeMin": "{count}dk",
     "timeHour": "{count}s",
-    "timeDay": "{count}g"
+    "timeDay": "{count}g",
+    "tabUsers": "Kullanıcılar",
+    "tabDownloads": "İndirmeler",
+    "tabSettings": "Ayarlar"
   }
 }

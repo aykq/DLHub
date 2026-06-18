@@ -168,6 +168,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [statsPeriod, setStatsPeriod] = useState<"7d" | "30d" | "all">("all");
+  const [activeTab, setActiveTab] = useState<"users" | "downloads" | "settings">("users");
 
   function setItemLoading(key: string, val: boolean) {
     setLoading((prev) => ({ ...prev, [key]: val }));
@@ -366,8 +367,44 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
         />
       </div>
 
+      {/* Tab bar */}
+      <div className="flex gap-1.5">
+        {(
+          [
+            { key: "users", label: t("tabUsers"), badge: pendingUsers.length },
+            { key: "downloads", label: t("tabDownloads"), badge: 0 },
+            { key: "settings", label: t("tabSettings"), badge: 0 },
+          ] as const
+        ).map(({ key, label, badge }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+              activeTab === key
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            )}
+          >
+            {label}
+            {badge > 0 && (
+              <span
+                className={cn(
+                  "inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] rounded-full text-[0.6rem] font-bold px-1",
+                  activeTab === key
+                    ? "bg-white/20 text-primary-foreground"
+                    : "bg-yellow-500 text-white"
+                )}
+              >
+                {badge}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
       {/* Bekleyen Kullanıcılar */}
-      {pendingUsers.length > 0 && (
+      {activeTab === "users" && pendingUsers.length > 0 && (
         <section className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-5 space-y-3">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-yellow-600 dark:text-yellow-400 flex items-center gap-1.5">
             <Clock className="size-3.5" />
@@ -423,7 +460,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       )}
 
       {/* Tüm Kullanıcılar */}
-      <section className="rounded-xl border border-border bg-card p-5 space-y-3">
+      {activeTab === "users" && <section className="rounded-xl border border-border bg-card p-5 space-y-3">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
           <Users className="size-3.5" />
           {t("allUsers")} ({users.length})
@@ -542,10 +579,10 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
             ))}
           </ul>
         )}
-      </section>
+      </section>}
 
       {/* İstatistikler */}
-      {(stats.totalDownloadedBytes > 0 || stats.platformStats.length > 0) && (
+      {activeTab === "downloads" && (stats.totalDownloadedBytes > 0 || stats.platformStats.length > 0) && (
         <section className="rounded-xl border border-border bg-card p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
@@ -598,7 +635,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       )}
 
       {/* İndirmeler */}
-      <section className="rounded-xl border border-border bg-card p-5 space-y-3">
+      {activeTab === "downloads" && <section className="rounded-xl border border-border bg-card p-5 space-y-3">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
           <Download className="size-3.5" />
           {t("downloadsSection")} ({dlList.length})
@@ -701,10 +738,10 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
             })}
           </ul>
         )}
-      </section>
+      </section>}
 
       {/* Ayarlar */}
-      <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+      {activeTab === "settings" && <section className="rounded-xl border border-border bg-card p-5 space-y-4">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
           <Settings className="size-3.5" />
           {t("settingsSection")}
@@ -763,7 +800,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
             )}
           </div>
         </div>
-      </section>
+      </section>}
     </div>
   );
 }

@@ -126,6 +126,9 @@
     "timeNow": "just now",
     "timeMin": "{count}m",
     "timeHour": "{count}h",
-    "timeDay": "{count}d"
+    "timeDay": "{count}d",
+    "tabUsers": "Users",
+    "tabDownloads": "Downloads",
+    "tabSettings": "Settings"
   }
 }
