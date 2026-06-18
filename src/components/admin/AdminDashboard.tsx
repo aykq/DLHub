@@ -173,8 +173,8 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
     setLoading((prev) => ({ ...prev, [key]: val }));
   }
 
-  const refresh = useCallback(async (period?: string) => {
-    setIsRefreshing(true);
+  const refresh = useCallback(async (period?: string, silent = false) => {
+    if (!silent) setIsRefreshing(true);
     try {
       const p = period ?? statsPeriod;
       const [usersRes, dlRes, statsRes] = await Promise.all([
@@ -186,10 +186,15 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       if (dlRes.ok) setDlList(await dlRes.json() as AdminDownload[]);
       if (statsRes.ok) setStats(await statsRes.json() as AdminStats);
     } finally {
-      setIsRefreshing(false);
+      if (!silent) setIsRefreshing(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statsPeriod]);
+
+  useEffect(() => {
+    const id = setInterval(() => { void refresh(undefined, true); }, 30_000);
+    return () => clearInterval(id);
+  }, [refresh]);
 
   async function changePeriod(period: "7d" | "30d" | "all") {
     setStatsPeriod(period);

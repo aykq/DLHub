@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { RefreshCw, Download, Loader2, AlertCircle, Clock, Search, X, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,15 +85,20 @@ export function DownloadHistory({ initialDownloads }: Props) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-  async function refresh() {
-    setIsRefreshing(true);
+  const refresh = useCallback(async (silent = false) => {
+    if (!silent) setIsRefreshing(true);
     try {
       const res = await fetch("/api/downloads");
       if (res.ok) setDownloads(await res.json() as DownloadRecord[]);
     } finally {
-      setIsRefreshing(false);
+      if (!silent) setIsRefreshing(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => { void refresh(true); }, 30_000);
+    return () => clearInterval(id);
+  }, [refresh]);
 
   const filtered = useMemo(() => {
     return downloads.filter((dl) => {
@@ -123,7 +128,7 @@ export function DownloadHistory({ initialDownloads }: Props) {
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={refresh}
+          onClick={() => void refresh()}
           disabled={isRefreshing}
           aria-label={t("refresh")}
         >
