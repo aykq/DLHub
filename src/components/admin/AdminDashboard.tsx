@@ -656,9 +656,14 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[0.8125rem] font-medium truncate">
+                      <a
+                        href={dl.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[0.8125rem] font-medium truncate hover:underline"
+                      >
                         {dl.title ?? hostOf(dl.url)}
-                      </span>
+                      </a>
                       <StatusBadge status={dl.status} />
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
