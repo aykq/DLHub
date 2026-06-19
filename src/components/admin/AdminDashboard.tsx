@@ -85,14 +85,23 @@ function fmtBytes(bytes: number): string {
 
 type TFn = ReturnType<typeof useTranslations<"admin">>;
 
-function timeAgo(dateStr: string, t: TFn): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
+function fmtDownloadTime(dateStr: string, t: TFn): { display: string; full: string } {
+  const date = new Date(dateStr);
+  const diff = Date.now() - date.getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return t("timeNow");
-  if (m < 60) return t("timeMin", { count: m });
+  const full = date.toLocaleString("tr-TR", {
+    day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+  if (m < 1) return { display: t("timeNow"), full };
+  if (m < 60) return { display: t("timeMin", { count: m }), full };
   const h = Math.floor(m / 60);
-  if (h < 24) return t("timeHour", { count: h });
-  return t("timeDay", { count: Math.floor(h / 24) });
+  if (h < 24) return { display: t("timeHour", { count: h }), full };
+  const display = date.toLocaleDateString("tr-TR", {
+    day: "numeric",
+    month: "short",
+    ...(date.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}),
+  });
+  return { display, full };
 }
 
 const VCODEC_NAMES: Record<string, string> = { av01: "AV1", vp09: "VP9", avc1: "H.264", hev1: "HEVC", vp08: "VP8" };
@@ -677,7 +686,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                         </>
                       )}
                       <span className="opacity-40">·</span>
-                      <span>{timeAgo(dl.createdAt, t)}</span>
+                      {(() => { const { display, full } = fmtDownloadTime(dl.createdAt, t); return <span title={full} className="cursor-default">{display}</span>; })()}
                     </p>
                     {(dl.width || dl.duration || dl.videoCodec) && (
                       <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5 flex-wrap">
