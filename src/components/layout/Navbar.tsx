@@ -2,8 +2,9 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { Download, LayoutDashboard } from "lucide-react";
+import { Download } from "lucide-react";
 import Link from "next/link";
+import { UserMenu } from "@/components/layout/UserMenu";
 
 interface NavbarProps {
   maxWidth?: string;
@@ -14,14 +15,6 @@ export async function Navbar({ maxWidth = "max-w-2xl", extraActions }: NavbarPro
   const session = await auth();
 
   const userImage = session?.user?.image;
-  const displayName = session?.user?.name ?? session?.user?.email ?? "";
-  const initials =
-    displayName
-      .split(" ")
-      .map((w) => w[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2) || "?";
 
   let isAdmin = false;
   if (session?.user?.id) {
@@ -42,30 +35,15 @@ export async function Navbar({ maxWidth = "max-w-2xl", extraActions }: NavbarPro
 
         <div className="flex items-center gap-2">
           {extraActions}
-          {isAdmin && (
-            <Link
-              href="/admin"
-              aria-label="Admin Paneli"
-              className="flex items-center justify-center size-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            >
-              <LayoutDashboard className="size-4" />
-            </Link>
-          )}
           {session?.user && (
-            <Link href="/profile" aria-label="Profil">
-              {userImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={userImage}
-                  alt=""
-                  className="size-8 rounded-full ring-2 ring-border hover:ring-primary transition-all"
-                />
-              ) : (
-                <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary ring-2 ring-border hover:ring-primary transition-all select-none">
-                  {initials}
-                </div>
-              )}
-            </Link>
+            <UserMenu
+              user={{
+                name: session.user.name,
+                email: session.user.email,
+                image: userImage,
+              }}
+              isAdmin={isAdmin}
+            />
           )}
         </div>
       </div>
