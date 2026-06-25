@@ -51,7 +51,17 @@
     "notificationBody": "Dosyanız hazır",
     "cancel": "İptal Et",
     "cancelling": "İptal ediliyor…",
-    "cancelled": "İndirme iptal edildi"
+    "cancelled": "İndirme iptal edildi",
+    "etaLeft": "{eta} kaldı",
+    "errors": {
+      "failed": "İndirme sırasında hata oluştu",
+      "serverDisconnected": "Sunucu bağlantısı kesildi",
+      "dailyLimit": "Günlük indirme limitine ulaştınız",
+      "domainBlocked": "Bu domain indirme için izin verilmiyor",
+      "startFailed": "İndirme başlatılamadı",
+      "connectionFailed": "Sunucuya bağlanılamadı",
+      "formatFailed": "Format bilgisi alınamadı"
+    }
   },
   "history": {
     "title": "Geçmiş",
@@ -66,7 +76,9 @@
     "error": "Hata",
     "expired": "Süresi doldu",
     "filterCancelled": "İptal Edildi",
-    "cancelled": "İptal edildi"
+    "cancelled": "İptal edildi",
+    "today": "Bugün",
+    "yesterday": "Dün"
   },
   "sites": {
     "title": "Desteklenen Siteler",
@@ -133,6 +145,9 @@
     "timeMin": "{count}dk",
     "timeHour": "{count}s",
     "timeDay": "{count}g",
+    "notificationsTitle": "Bildirimler",
+    "markAllRead": "Tümünü okundu işaretle",
+    "noNotifications": "Bildirim yok",
     "tabUsers": "Kullanıcılar",
     "tabDownloads": "İndirmeler",
     "tabSettings": "Ayarlar"

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface Notification {
   id: string;
@@ -13,17 +14,18 @@ interface Notification {
   createdAt: string;
 }
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, t: ReturnType<typeof useTranslations<"admin">>): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "az önce";
-  if (m < 60) return `${m}dk`;
+  if (m < 1) return t("timeNow");
+  if (m < 60) return t("timeMin", { count: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}s`;
-  return `${Math.floor(h / 24)}g`;
+  if (h < 24) return t("timeHour", { count: h });
+  return t("timeDay", { count: Math.floor(h / 24) });
 }
 
 export function NotificationBell() {
+  const t = useTranslations("admin");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -92,20 +94,20 @@ export function NotificationBell() {
         <div className="absolute right-0 top-10 w-80 rounded-xl border border-border bg-popover shadow-lg z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
             <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Bildirimler
+              {t("notificationsTitle")}
             </span>
             {notifications.length > 0 && (
               <button
                 onClick={markAllRead}
                 className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
               >
-                Tümünü okundu işaretle
+                {t("markAllRead")}
               </button>
             )}
           </div>
 
           {notifications.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">Bildirim yok</p>
+            <p className="text-sm text-muted-foreground text-center py-6">{t("noNotifications")}</p>
           ) : (
             <ul className="max-h-80 overflow-y-auto divide-y divide-border">
               {notifications.map((n) => (
@@ -117,7 +119,7 @@ export function NotificationBell() {
                   )}
                 >
                   <p className="leading-snug">{n.message}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{timeAgo(n.createdAt)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{timeAgo(n.createdAt, t)}</p>
                 </li>
               ))}
             </ul>

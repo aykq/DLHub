@@ -134,7 +134,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
         }));
       } else if (data.status === "error") {
         es.close();
-        setPhase({ type: "error", message: data.error ?? "İndirme sırasında hata oluştu" });
+        setPhase({ type: "error", message: data.error ?? t("errors.failed") });
       }
     };
 
@@ -142,7 +142,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
       es.close();
       setPhase((prev) => {
         if (prev.type === "completed" || prev.type === "error") return prev;
-        return { type: "error", message: "Sunucu bağlantısı kesildi" };
+        return { type: "error", message: t("errors.serverDisconnected") };
       });
     };
   }
@@ -158,12 +158,12 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
       const res = await fetch(`/api/formats?url=${encodeURIComponent(trimmed)}`);
       const data = await res.json() as VideoInfo & { error?: string };
       if (!res.ok) {
-        setPhase({ type: "error", message: data.error ?? "Format bilgisi alınamadı" });
+        setPhase({ type: "error", message: data.error ?? t("errors.formatFailed") });
         return;
       }
       setPhase({ type: "ready", url: trimmed, info: data });
     } catch {
-      setPhase({ type: "error", message: "Sunucuya bağlanılamadı" });
+      setPhase({ type: "error", message: t("errors.connectionFailed") });
     }
   }
 
@@ -192,17 +192,17 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
           type: "error",
           message:
             res.status === 429
-              ? (data.error ?? "Günlük indirme limitine ulaştınız")
+              ? (data.error ?? t("errors.dailyLimit"))
               : res.status === 403
-              ? (data.error ?? "Bu domain indirme için izin verilmiyor")
-              : (data.error ?? "İndirme başlatılamadı"),
+              ? (data.error ?? t("errors.domainBlocked"))
+              : (data.error ?? t("errors.startFailed")),
         });
         return;
       }
       setPhase({ type: "downloading", downloadId: data.id!, title: phase.info.title, percent: 0, speed: null, eta: null });
       startSSE(data.id!);
     } catch {
-      setPhase({ type: "error", message: "Sunucuya bağlanılamadı" });
+      setPhase({ type: "error", message: t("errors.connectionFailed") });
     } finally {
       setIsStarting(false);
     }
@@ -440,7 +440,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
                 <span className="font-mono">
                   {[
                     phase.speed,
-                    phase.eta ? `${phase.eta} kaldı` : null,
+                    phase.eta ? t("etaLeft", { eta: phase.eta }) : null,
                   ]
                     .filter(Boolean)
                     .join(" — ")}

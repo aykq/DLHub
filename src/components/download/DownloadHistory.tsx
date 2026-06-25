@@ -28,17 +28,17 @@ interface Props {
   initialDownloads: DownloadRecord[];
 }
 
-function fmtDateTime(dateStr: string): string {
+function fmtDateTime(dateStr: string, todayLabel: string, yesterdayLabel: string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
   const isYesterday = date.toDateString() === yesterday.toDateString();
-  const time = date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
-  if (isToday) return `Bugün, ${time}`;
-  if (isYesterday) return `Dün, ${time}`;
-  return date.toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" }) + `, ${time}`;
+  const time = date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  if (isToday) return `${todayLabel}, ${time}`;
+  if (isYesterday) return `${yesterdayLabel}, ${time}`;
+  return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) + `, ${time}`;
 }
 
 const VCODEC_NAMES: Record<string, string> = { av01: "AV1", vp09: "VP9", avc1: "H.264", hev1: "HEVC", vp08: "VP8" };
@@ -211,7 +211,7 @@ export function DownloadHistory({ initialDownloads }: Props) {
                     <ExternalLink className="size-2.5 opacity-60" />
                   </a>
                   <span className="opacity-40">·</span>
-                  <span>{fmtDateTime(dl.createdAt)}</span>
+                  <span>{fmtDateTime(dl.createdAt, t("today"), t("yesterday"))}</span>
                 </p>
                 {(dl.width || dl.duration || dl.videoCodec) && (
                   <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5 flex-wrap">

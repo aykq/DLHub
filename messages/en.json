@@ -51,7 +51,17 @@
     "notificationBody": "Your file is ready",
     "cancel": "Cancel",
     "cancelling": "Cancelling…",
-    "cancelled": "Download cancelled"
+    "cancelled": "Download cancelled",
+    "etaLeft": "{eta} left",
+    "errors": {
+      "failed": "Download failed",
+      "serverDisconnected": "Server connection lost",
+      "dailyLimit": "Daily download limit reached",
+      "domainBlocked": "This domain is not allowed for downloads",
+      "startFailed": "Failed to start download",
+      "connectionFailed": "Could not connect to server",
+      "formatFailed": "Could not fetch format info"
+    }
   },
   "history": {
     "title": "History",
@@ -66,7 +76,9 @@
     "error": "Error",
     "expired": "Expired",
     "filterCancelled": "Cancelled",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "today": "Today",
+    "yesterday": "Yesterday"
   },
   "sites": {
     "title": "Supported Sites",
@@ -133,6 +145,9 @@
     "timeMin": "{count}m",
     "timeHour": "{count}h",
     "timeDay": "{count}d",
+    "notificationsTitle": "Notifications",
+    "markAllRead": "Mark all as read",
+    "noNotifications": "No notifications",
     "tabUsers": "Users",
     "tabDownloads": "Downloads",
     "tabSettings": "Settings"
