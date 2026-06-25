@@ -161,7 +161,7 @@ export async function GET(
                 where: eq(users.id, download.userId),
                 columns: { name: true },
               });
-              const msg = `İndirme tamamlandı: ${prog.title ?? download.url}`;
+              const msg = `Download complete: ${prog.title ?? download.url}`;
               await Promise.all([
                 sendDownloadCompleteDiscordNotification({
                   userId: download.userId,

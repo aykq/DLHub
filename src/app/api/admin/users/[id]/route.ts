@@ -26,7 +26,7 @@ export async function PATCH(
   }
 
   if (Object.keys(updates).length === 0) {
-    return Response.json({ error: "Geçersiz güncelleme" }, { status: 400 });
+    return Response.json({ error: "Invalid update" }, { status: 400 });
   }
 
   // Status değişikliği varsa güncelleme öncesi mevcut durumu al
@@ -47,7 +47,7 @@ export async function PATCH(
     broadcastUserStatus(id, { status: updates.status });
     broadcastNotification({
       type: `user_${updates.status}`,
-      message: `Kullanıcı durumu güncellendi: ${updates.status}`,
+      message: `User status updated: ${updates.status}`,
       userId: id,
       createdAt: new Date().toISOString(),
     });
@@ -83,7 +83,7 @@ export async function DELETE(
 
   const { id } = await params;
   if (id === adminId) {
-    return Response.json({ error: "Kendinizi silemezsiniz" }, { status: 400 });
+    return Response.json({ error: "Cannot delete yourself" }, { status: 400 });
   }
 
   await db.delete(users).where(eq(users.id, id));

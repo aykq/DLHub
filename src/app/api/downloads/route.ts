@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     columns: { status: true },
   });
   if (dbUser?.status !== "approved") {
-    return Response.json({ error: "Hesabınız henüz onaylanmamış" }, { status: 403 });
+    return Response.json({ error: "Account not approved" }, { status: 403 });
   }
 
   const body = await req.json() as {
@@ -53,12 +53,12 @@ export async function POST(req: NextRequest) {
   const { url, quality, container, vcodec, acodec } = body;
 
   if (!url || typeof url !== "string" || !url.startsWith("http")) {
-    return Response.json({ error: "Geçerli bir URL girin" }, { status: 400 });
+    return Response.json({ error: "Enter a valid URL" }, { status: 400 });
   }
 
   const validContainers = ["mp4", "mkv", "webm", "mp3"];
   if (!quality || !container || !validContainers.includes(container)) {
-    return Response.json({ error: "Geçersiz format seçimi" }, { status: 400 });
+    return Response.json({ error: "Invalid format selection" }, { status: 400 });
   }
 
   // Build a readable format ID for DB storage
@@ -72,10 +72,10 @@ export async function POST(req: NextRequest) {
       const hostname = new URL(url).hostname.replace(/^www\./, "");
       const allowed = whitelist.some((d) => hostname === d || hostname.endsWith(`.${d}`));
       if (!allowed) {
-        return Response.json({ error: "Bu domain indirme için izin verilmiyor" }, { status: 403 });
+        return Response.json({ error: "This domain is not allowed for downloads" }, { status: 403 });
       }
     } catch {
-      return Response.json({ error: "Geçerli bir URL girin" }, { status: 400 });
+      return Response.json({ error: "Enter a valid URL" }, { status: 400 });
     }
   }
 
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
       .where(and(eq(downloads.userId, session.user.id), gte(downloads.createdAt, since)));
     if (todayCount >= dailyLimit) {
       return Response.json(
-        { error: `Günlük indirme limitine ulaştınız (${dailyLimit})` },
+        { error: `Daily download limit reached (${dailyLimit})` },
         { status: 429 }
       );
     }
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
   });
   if (active) {
     return Response.json(
-      { error: "Şu an başka bir indirme devam ediyor, lütfen bekleyin" },
+      { error: "A download is already in progress" },
       { status: 409 }
     );
   }

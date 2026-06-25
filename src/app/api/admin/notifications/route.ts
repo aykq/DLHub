@@ -32,5 +32,5 @@ export async function POST(req: NextRequest) {
     return Response.json({ ok: true });
   }
 
-  return Response.json({ error: "Geçersiz aksiyon" }, { status: 400 });
+  return Response.json({ error: "Invalid action" }, { status: 400 });
 }

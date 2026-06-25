@@ -14,12 +14,12 @@ export async function GET(req: NextRequest) {
     columns: { status: true },
   });
   if (dbUser?.status !== "approved") {
-    return Response.json({ error: "Hesabınız onaylanmamış" }, { status: 403 });
+    return Response.json({ error: "Account not approved" }, { status: 403 });
   }
 
   const url = req.nextUrl.searchParams.get("url");
   if (!url || !url.startsWith("http")) {
-    return Response.json({ error: "Geçerli bir URL girin" }, { status: 400 });
+    return Response.json({ error: "Enter a valid URL" }, { status: 400 });
   }
 
   try {
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error("[formats] yt-dlp error:", err);
     return Response.json(
-      { error: "Video bilgisi alınamadı. URL destekleniyor mu?" },
+      { error: "Could not fetch video info. Is the URL supported?" },
       { status: 422 }
     );
   }

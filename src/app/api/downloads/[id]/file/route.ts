@@ -33,11 +33,11 @@ export async function GET(
   const { id } = await params;
 
   const token = req.nextUrl.searchParams.get("token");
-  if (!token) return new Response("Token gerekli", { status: 400 });
+  if (!token) return new Response("Token required", { status: 400 });
 
   const verified = verifyDownloadToken(token);
   if (!verified || verified.downloadId !== id) {
-    return new Response("Geçersiz veya süresi dolmuş link", { status: 401 });
+    return new Response("Invalid or expired link", { status: 401 });
   }
 
   const download = await db.query.downloads.findFirst({
@@ -46,7 +46,7 @@ export async function GET(
   });
 
   if (!download || download.status !== "completed" || !download.filePath) {
-    return new Response("Dosya bulunamadı", { status: 404 });
+    return new Response("File not found", { status: 404 });
   }
 
   if (download.userId !== session.user.id) {
@@ -54,14 +54,14 @@ export async function GET(
       where: eq(users.id, session.user.id),
       columns: { role: true },
     });
-    if (dbUser?.role !== "admin") return new Response("Yetkisiz", { status: 403 });
+    if (dbUser?.role !== "admin") return new Response("Forbidden", { status: 403 });
   }
 
   let fileStat: Awaited<ReturnType<typeof stat>>;
   try {
     fileStat = await stat(download.filePath);
   } catch {
-    return new Response("Dosya artık mevcut değil", { status: 410 });
+    return new Response("File no longer available", { status: 410 });
   }
 
   const fileSize = fileStat.size;
@@ -81,7 +81,7 @@ export async function GET(
 
   if (rangeHeader) {
     const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
-    if (!match) return new Response("Range geçersiz", { status: 416 });
+    if (!match) return new Response("Invalid range", { status: 416 });
 
     const start = parseInt(match[1], 10);
     const requestedEnd = match[2] ? parseInt(match[2], 10) : undefined;
