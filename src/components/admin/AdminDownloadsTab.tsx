@@ -84,8 +84,8 @@ export function AdminDownloadsTab({ dlList, setDlList, stats, statsPeriod, chang
         body: JSON.stringify({ ids }),
       });
       if (res.ok) {
+        setDlList((prev) => prev.map((dl) => ids.includes(dl.id) ? { ...dl, status: "expired" } : dl));
         exitSelectMode();
-        animateRemove(ids);
       }
     } finally {
       setItemLoading("bulk-delete", false);
@@ -126,7 +126,7 @@ export function AdminDownloadsTab({ dlList, setDlList, stats, statsPeriod, chang
     try {
       const res = await fetch(`/api/admin/downloads/${dlId}`, { method: "DELETE" });
       if (res.ok) {
-        animateRemove([dlId]);
+        setDlList((prev) => prev.map((dl) => (dl.id === dlId ? { ...dl, status: "expired" } : dl)));
       }
     } finally {
       setItemLoading(key, false);
