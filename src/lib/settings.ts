@@ -6,7 +6,6 @@ const DEFAULTS: Record<string, string> = {
   daily_download_limit: "10",
   whitelist_domains: "",
   download_expiry_hours: "24",
-  vk_cookies_path: "",
 };
 
 export async function getSetting(key: string): Promise<string> {

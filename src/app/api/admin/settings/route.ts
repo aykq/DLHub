@@ -8,10 +8,9 @@ const DEFAULTS: Record<string, string> = {
   daily_download_limit: "10",
   whitelist_domains: "",
   download_expiry_hours: "24",
-  vk_cookies_path: "",
 };
 
-const SETTING_KEYS = ["daily_download_limit", "whitelist_domains", "download_expiry_hours", "vk_cookies_path"];
+const SETTING_KEYS = ["daily_download_limit", "whitelist_domains", "download_expiry_hours"];
 
 export async function GET() {
   const adminId = await requireAdmin();
