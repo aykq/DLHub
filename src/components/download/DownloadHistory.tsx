@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { fmtBytes, fmtDuration } from "@/lib/format";
 
 export interface DownloadRecord {
   id: string;
@@ -54,20 +55,6 @@ function formatLabel(id: string): string {
   return parts.join(" · ");
 }
 
-function fmtDuration(secs: number): string {
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = secs % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-function fileSize(bytes: number | null): string {
-  if (!bytes) return "";
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
-}
 
 function hostOf(url: string): string {
   try { return new URL(url).hostname.replace(/^www\./, ""); }
@@ -229,7 +216,7 @@ export function DownloadHistory({ initialDownloads }: Props) {
                         {dl.fileSize && (
                           <>
                             <span className="opacity-40">·</span>
-                            <span className="font-mono">{fileSize(dl.fileSize)}</span>
+                            <span className="font-mono">{fmtBytes(dl.fileSize!)}</span>
                           </>
                         )}
                         <span className="opacity-40">·</span>

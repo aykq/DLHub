@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { fmtBytes } from "@/lib/format";
 
 export interface AdminUser {
   id: string;
@@ -78,12 +79,6 @@ interface Props {
   initialSettings: AdminSettings;
 }
 
-function fmtBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
-}
 
 type TFn = ReturnType<typeof useTranslations<"admin">>;
 

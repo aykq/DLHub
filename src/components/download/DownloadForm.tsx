@@ -7,6 +7,7 @@ import { Download, Loader2, CheckCircle, AlertCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SupportedSites } from "./SupportedSites";
 import { useTranslations } from "next-intl";
+import { fmtBytes, fmtDuration } from "@/lib/format";
 
 interface FormatVariant {
   codec: string;
@@ -45,19 +46,6 @@ interface Props {
   activeDownloadTitle?: string | null;
 }
 
-function fmtBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(0)} MB`;
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
-}
-
-function fmtDuration(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = Math.floor(sec % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
 
 export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
   const t = useTranslations("download");
