@@ -99,7 +99,7 @@ export function SupportedSites() {
               {filtered.map((s) => (
                 <span
                   key={s.domain}
-                  className="inline-flex items-center px-2.5 py-1 rounded-full bg-muted text-xs text-muted-foreground"
+                  className="inline-flex items-center px-2.5 py-1 rounded-md bg-muted/70 text-xs text-muted-foreground border border-border/60 hover:border-border transition-colors"
                 >
                   {s.name}
                 </span>

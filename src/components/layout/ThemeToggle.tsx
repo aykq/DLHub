@@ -44,7 +44,7 @@ export function ThemeToggle({ full = false }: { full?: boolean }) {
             className={cn(
               "p-1.5 rounded-md transition-colors cursor-pointer",
               theme === value
-                ? "bg-foreground/10 text-foreground"
+                ? "bg-primary/15 text-foreground"
                 : "text-muted-foreground hover:text-foreground"
             )}
             aria-label={value}

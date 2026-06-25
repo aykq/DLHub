@@ -23,7 +23,7 @@ export function LanguageToggle() {
       onClick={switchLocale}
       disabled={isPending}
       className={cn(
-        "flex items-center gap-1 text-xs font-bold px-2 py-1 rounded border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-50 cursor-pointer"
+        "flex items-center gap-1 font-mono text-[0.7rem] font-bold px-2 py-1 rounded border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-50 cursor-pointer"
       )}
       aria-label="Switch language"
     >
