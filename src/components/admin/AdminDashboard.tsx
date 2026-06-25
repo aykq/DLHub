@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -185,6 +185,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
   const [activeTab, setActiveTab] = useState<"users" | "downloads" | "settings">("users");
   const PAGE_SIZE = 7;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const prevVisibleRef = useRef(PAGE_SIZE);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [userSelectMode, setUserSelectMode] = useState(false);
@@ -773,20 +774,25 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
         ) : (
           <>
             <ul className="space-y-1.5">
-              {dlList.slice(0, visibleCount).map((dl) => {
+              {dlList.slice(0, visibleCount).map((dl, i) => {
                 const isActive = dl.status === "downloading" || dl.status === "pending";
                 const canDelete = dl.status !== "expired";
                 const canDownload = dl.status === "completed" && !!dl.token &&
                   dl.expiresAt && new Date(dl.expiresAt) > new Date();
                 const isSelected = selected.has(dl.id);
+                const isNew = i >= prevVisibleRef.current;
                 return (
                   <li
                     key={dl.id}
                     onClick={selectMode ? () => toggleSelect(dl.id) : undefined}
-                    style={{ gap: selectMode ? "0.75rem" : "0px" }}
+                    style={{
+                      gap: selectMode ? "0.75rem" : "0px",
+                      ...(isNew ? { animationDelay: `${(i - prevVisibleRef.current) * 40}ms` } : {}),
+                    }}
                     className={cn(
                       "flex items-center rounded-lg px-3 py-2.5 bg-muted/40 text-sm",
                       "transition-[gap,background-color,box-shadow] duration-200",
+                      isNew && "animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:backwards]",
                       selectMode && "cursor-pointer",
                       selectMode && isSelected && "bg-primary/5 ring-1 ring-primary/20"
                     )}
@@ -901,7 +907,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
             </ul>
             {dlList.length > visibleCount && (
               <button
-                onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                onClick={() => { prevVisibleRef.current = visibleCount; setVisibleCount((c) => c + PAGE_SIZE); }}
                 className="w-full text-xs text-muted-foreground hover:text-foreground py-2 border border-border/60 rounded-lg hover:bg-muted/40 transition-colors"
               >
                 {t("loadMore", { count: dlList.length - visibleCount })}
