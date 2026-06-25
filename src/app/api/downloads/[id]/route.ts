@@ -4,7 +4,10 @@ import { downloads, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getProgress, removeFromStore, cancelDownload } from "@/lib/ytdlp-download";
 import { createDownloadToken } from "@/lib/download-token";
-import { unlink } from "fs/promises";
+import { readdir, unlink } from "fs/promises";
+import path from "path";
+
+const DOWNLOADS_PATH = process.env.DOWNLOADS_PATH ?? "/downloads";
 import { getSetting } from "@/lib/settings";
 
 async function requireAccess(downloadUserId: string, sessionUserId: string): Promise<boolean> {
@@ -91,17 +94,28 @@ export async function DELETE(
     return Response.json({ error: "Yetkisiz" }, { status: 403 });
   }
 
-  if (download.status === "downloading" || download.status === "pending") {
+  const isActive = download.status === "downloading" || download.status === "pending";
+
+  if (isActive) {
     cancelDownload(id);
+
+    try {
+      const files = await readdir(DOWNLOADS_PATH);
+      await Promise.all(
+        files
+          .filter((f) => f.startsWith(`${id}_`))
+          .map((f) =>
+            unlink(path.join(DOWNLOADS_PATH, f)).catch(() => {})
+          )
+      );
+    } catch { }
+
+    await db.update(downloads).set({ status: "cancelled", filePath: null }).where(eq(downloads.id, id));
+    return Response.json({ ok: true });
   }
 
-  // Dosyayı diskten sil
   if (download.filePath) {
-    try {
-      await unlink(download.filePath);
-    } catch {
-      // dosya zaten silinmiş olabilir
-    }
+    try { await unlink(download.filePath); } catch { }
   }
 
   await db
