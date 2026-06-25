@@ -188,7 +188,7 @@ export async function GET(
           if (prog.status === "error") {
             await db.update(downloads).set({
               status: "error",
-              errorMessage: prog.error ?? "Bilinmeyen hata",
+              errorMessage: prog.error ?? "Unknown error",
             }).where(eq(downloads.id, id));
             removeFromStore(id);
             close({ status: "error", error: prog.error });

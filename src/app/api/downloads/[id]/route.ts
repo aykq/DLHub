@@ -31,12 +31,12 @@ export async function GET(
     where: eq(downloads.id, id),
   });
 
-  if (!download) return Response.json({ error: "Bulunamadı" }, { status: 404 });
+  if (!download) return Response.json({ error: "Not found" }, { status: 404 });
   if (!await requireAccess(download.userId, session.user.id)) {
-    return Response.json({ error: "Yetkisiz" }, { status: 403 });
+    return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // İndirme tamamlandıysa ama DB henüz güncellenmemişse güncelle
+  // Sync finished state in case DB wasn't updated yet (e.g. server restart)
   if (download.status === "downloading" || download.status === "pending") {
     const prog = getProgress(id);
     if (prog?.status === "finished" && prog.filename) {
@@ -89,14 +89,15 @@ export async function DELETE(
     },
   });
 
-  if (!download) return Response.json({ error: "Bulunamadı" }, { status: 404 });
+  if (!download) return Response.json({ error: "Not found" }, { status: 404 });
   if (!await requireAccess(download.userId, session.user.id)) {
-    return Response.json({ error: "Yetkisiz" }, { status: 403 });
+    return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const isActive = download.status === "downloading" || download.status === "pending";
 
   if (isActive) {
+    const prog = getProgress(id);
     cancelDownload(id);
 
     try {
@@ -110,7 +111,11 @@ export async function DELETE(
       );
     } catch { }
 
-    await db.update(downloads).set({ status: "cancelled", filePath: null }).where(eq(downloads.id, id));
+    await db.update(downloads).set({
+      status: "cancelled",
+      filePath: null,
+      ...(prog?.title ? { title: prog.title } : {}),
+    }).where(eq(downloads.id, id));
     return Response.json({ ok: true });
   }
 
