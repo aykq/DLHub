@@ -187,6 +187,8 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [userSelectMode, setUserSelectMode] = useState(false);
+  const [userSelected, setUserSelected] = useState<Set<string>>(new Set());
 
   function setItemLoading(key: string, val: boolean) {
     setLoading((prev) => ({ ...prev, [key]: val }));
@@ -297,6 +299,35 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       }
     } finally {
       setItemLoading(key, false);
+    }
+  }
+
+  function toggleUserSelect(id: string) {
+    setUserSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function exitUserSelectMode() {
+    setUserSelectMode(false);
+    setUserSelected(new Set());
+  }
+
+  async function deleteSelectedUsers() {
+    if (userSelected.size === 0) return;
+    if (!(await askConfirm({ message: t("deleteSelectedConfirm", { count: userSelected.size }), confirmLabel: t("titleDelete"), cancelLabel: t("selectCancel"), variant: "destructive" }))) return;
+    const ids = Array.from(userSelected);
+    const res = await fetch("/api/admin/users", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    if (res.ok) {
+      setUsers((prev) => prev.filter((u) => !ids.includes(u.id)));
+      setStats((prev) => ({ ...prev, totalUsers: prev.totalUsers - ids.length }));
+      exitUserSelectMode();
     }
   }
 
@@ -526,19 +557,63 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
 
       {/* Tüm Kullanıcılar */}
       {activeTab === "users" && <section className="rounded-xl border border-border bg-card p-5 space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-          <Users className="size-3.5" />
-          {t("allUsers")} ({users.length})
-        </h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 shrink-0">
+            <Users className="size-3.5" />
+            {t("allUsers")} ({users.length})
+          </h2>
+          <div className="relative flex items-center gap-1.5 shrink-0">
+            <div className={cn(
+              "flex items-center gap-1.5 transition-all duration-200",
+              userSelectMode ? "opacity-0 pointer-events-none scale-95" : "opacity-100 scale-100"
+            )}>
+              <Button size="sm" variant="ghost" onClick={() => setUserSelectMode(true)} className="h-7 px-2.5 text-xs">
+                {t("selectMode")}
+              </Button>
+            </div>
+            <div className={cn(
+              "absolute right-0 flex items-center gap-1.5 transition-all duration-200",
+              userSelectMode ? "opacity-100 scale-100" : "opacity-0 pointer-events-none scale-95"
+            )}>
+              <Button size="sm" variant="ghost" onClick={exitUserSelectMode} className="h-7 px-2.5 text-xs">
+                {t("selectCancel")}
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => void deleteSelectedUsers()} disabled={userSelected.size === 0} className="h-7 px-2.5 text-xs">
+                {t("deleteSelected", { count: userSelected.size })}
+              </Button>
+            </div>
+          </div>
+        </div>
         {users.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("noUsers")}</p>
         ) : (
           <ul className="space-y-1.5">
-            {users.map((u) => (
+            {users.map((u) => {
+              const isUserSelected = userSelected.has(u.id);
+              return (
               <li
                 key={u.id}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 bg-muted/40"
+                onClick={userSelectMode ? () => toggleUserSelect(u.id) : undefined}
+                style={{ gap: userSelectMode ? "0.75rem" : "0px" }}
+                className={cn(
+                  "flex items-center rounded-lg px-3 py-2.5 bg-muted/40",
+                  "transition-[gap,background-color,box-shadow] duration-200",
+                  userSelectMode && "cursor-pointer",
+                  userSelectMode && isUserSelected && "bg-primary/5 ring-1 ring-primary/20"
+                )}
               >
+                {/* Checkbox — always rendered, width animates */}
+                <div
+                  style={{ width: userSelectMode ? "1rem" : "0px", transition: "width 200ms ease-out" }}
+                  className="shrink-0 overflow-hidden"
+                >
+                  <div className={cn(
+                    "size-4 rounded border-2 flex items-center justify-center transition-colors duration-150",
+                    isUserSelected ? "bg-ring border-ring" : "border-border"
+                  )}>
+                    {isUserSelected && <Check className="size-2.5 text-white animate-in zoom-in-50 duration-100" />}
+                  </div>
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium truncate">{u.name ?? u.email}</span>
@@ -547,16 +622,14 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                     )}
                     <StatusBadge status={u.status} />
                     {u.dailyLimit > 0 && (
-                      <span
-                        className={cn(
-                          "text-[0.65rem] px-1.5 py-0.5 rounded font-medium",
-                          u.todayCount >= u.dailyLimit
-                            ? "bg-destructive/15 text-destructive"
-                            : u.todayCount >= Math.ceil(u.dailyLimit * 0.8)
-                            ? "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400"
-                            : "bg-muted text-muted-foreground"
-                        )}
-                      >
+                      <span className={cn(
+                        "text-[0.65rem] px-1.5 py-0.5 rounded font-medium",
+                        u.todayCount >= u.dailyLimit
+                          ? "bg-destructive/15 text-destructive"
+                          : u.todayCount >= Math.ceil(u.dailyLimit * 0.8)
+                          ? "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400"
+                          : "bg-muted text-muted-foreground"
+                      )}>
                         {u.todayCount}/{u.dailyLimit}
                       </span>
                     )}
@@ -567,10 +640,8 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                         <div
                           className={cn(
                             "h-full rounded-full transition-[width]",
-                            u.todayCount >= u.dailyLimit
-                              ? "bg-destructive"
-                              : u.todayCount >= Math.ceil(u.dailyLimit * 0.8)
-                              ? "bg-yellow-500"
+                            u.todayCount >= u.dailyLimit ? "bg-destructive"
+                              : u.todayCount >= Math.ceil(u.dailyLimit * 0.8) ? "bg-yellow-500"
                               : "bg-primary"
                           )}
                           style={{ width: `${Math.min(100, (u.todayCount / u.dailyLimit) * 100)}%` }}
@@ -580,68 +651,32 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                   )}
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">{u.email}</p>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className={cn(
+                  "flex items-center gap-1 shrink-0 transition-opacity duration-150",
+                  userSelectMode ? "opacity-0 pointer-events-none" : "opacity-100"
+                )}>
                   {u.status === "pending" && (
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      onClick={() => updateUserStatus(u.id, "approved")}
-                      disabled={!!loading[`user-${u.id}-approved`]}
-                      title={t("approve")}
-                    >
-                      {loading[`user-${u.id}-approved`] ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <CheckCircle className="size-3.5 text-green-500" />
-                      )}
+                    <Button size="icon-sm" variant="ghost" onClick={() => updateUserStatus(u.id, "approved")} disabled={!!loading[`user-${u.id}-approved`]} title={t("approve")}>
+                      {loading[`user-${u.id}-approved`] ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle className="size-3.5 text-green-500" />}
                     </Button>
                   )}
                   {u.status === "approved" && (
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      onClick={() => updateUserStatus(u.id, "blocked")}
-                      disabled={!!loading[`user-${u.id}-blocked`]}
-                      title={t("titleBlock")}
-                    >
-                      {loading[`user-${u.id}-blocked`] ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <XCircle className="size-3.5 text-muted-foreground hover:text-destructive" />
-                      )}
+                    <Button size="icon-sm" variant="ghost" onClick={() => updateUserStatus(u.id, "blocked")} disabled={!!loading[`user-${u.id}-blocked`]} title={t("titleBlock")}>
+                      {loading[`user-${u.id}-blocked`] ? <Loader2 className="size-3.5 animate-spin" /> : <XCircle className="size-3.5 text-muted-foreground hover:text-destructive" />}
                     </Button>
                   )}
                   {u.status === "blocked" && (
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      onClick={() => updateUserStatus(u.id, "approved")}
-                      disabled={!!loading[`user-${u.id}-approved`]}
-                      title={t("titleUnblock")}
-                    >
-                      {loading[`user-${u.id}-approved`] ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <CheckCircle className="size-3.5 text-muted-foreground hover:text-green-500" />
-                      )}
+                    <Button size="icon-sm" variant="ghost" onClick={() => updateUserStatus(u.id, "approved")} disabled={!!loading[`user-${u.id}-approved`]} title={t("titleUnblock")}>
+                      {loading[`user-${u.id}-approved`] ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle className="size-3.5 text-muted-foreground hover:text-green-500" />}
                     </Button>
                   )}
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    onClick={() => deleteUser(u.id)}
-                    disabled={!!loading[`user-delete-${u.id}`]}
-                    title={t("titleDelete")}
-                  >
-                    {loading[`user-delete-${u.id}`] ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="size-3.5 text-muted-foreground hover:text-destructive" />
-                    )}
+                  <Button size="icon-sm" variant="ghost" onClick={(e) => { e.stopPropagation(); void deleteUser(u.id); }} disabled={!!loading[`user-delete-${u.id}`]} title={t("titleDelete")}>
+                    {loading[`user-delete-${u.id}`] ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5 text-muted-foreground hover:text-destructive" />}
                   </Button>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </section>}
