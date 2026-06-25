@@ -82,6 +82,7 @@ export function MagicLinkForm() {
         required
         autoComplete="email"
         disabled={state === "loading"}
+        className="h-11"
       />
       {state === "error" && (
         <p className="text-xs text-destructive text-center">{t("errors.error")}</p>
@@ -92,7 +93,7 @@ export function MagicLinkForm() {
       {state === "rate-limited" && (
         <p className="text-xs text-destructive text-center">{t("errors.rateLimited")}</p>
       )}
-      <Button type="submit" className="w-full" disabled={state === "loading" || !email}>
+      <Button type="submit" className="w-full h-11" disabled={state === "loading" || !email}>
         {state === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : t("sendMagicLink")}
       </Button>
     </form>
