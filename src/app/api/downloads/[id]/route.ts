@@ -6,9 +6,9 @@ import { getProgress, removeFromStore, cancelDownload } from "@/lib/ytdlp-downlo
 import { createDownloadToken } from "@/lib/download-token";
 import { readdir, unlink } from "fs/promises";
 import path from "path";
+import { getSetting } from "@/lib/settings";
 
 const DOWNLOADS_PATH = process.env.DOWNLOADS_PATH ?? "/downloads";
-import { getSetting } from "@/lib/settings";
 
 async function requireAccess(downloadUserId: string, sessionUserId: string): Promise<boolean> {
   if (downloadUserId === sessionUserId) return true;
