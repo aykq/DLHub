@@ -60,7 +60,8 @@
       "domainBlocked": "This domain is not allowed for downloads",
       "startFailed": "Failed to start download",
       "connectionFailed": "Could not connect to server",
-      "formatFailed": "Could not fetch format info"
+      "formatFailed": "Could not fetch format info",
+      "activeDownload": "A download is already in progress. Please cancel it first."
     }
   },
   "history": {

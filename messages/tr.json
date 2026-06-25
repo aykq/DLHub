@@ -60,7 +60,8 @@
       "domainBlocked": "Bu domain indirme için izin verilmiyor",
       "startFailed": "İndirme başlatılamadı",
       "connectionFailed": "Sunucuya bağlanılamadı",
-      "formatFailed": "Format bilgisi alınamadı"
+      "formatFailed": "Format bilgisi alınamadı",
+      "activeDownload": "Zaten aktif bir indirme var. Lütfen önce onu iptal edin."
     }
   },
   "history": {

@@ -191,7 +191,9 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
         setPhase({
           type: "error",
           message:
-            res.status === 429
+            res.status === 409
+              ? t("errors.activeDownload")
+              : res.status === 429
               ? (data.error ?? t("errors.dailyLimit"))
               : res.status === 403
               ? (data.error ?? t("errors.domainBlocked"))
