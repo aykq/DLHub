@@ -706,42 +706,31 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
             <Download className="size-3.5" />
             {t("downloadsSection")} ({dlList.length})
           </h2>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {selectMode ? (
-              <>
-                <Button size="sm" variant="ghost" onClick={exitSelectMode} className="h-7 px-2.5 text-xs">
-                  {t("selectCancel")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => void deleteSelected()}
-                  disabled={selected.size === 0}
-                  className="h-7 px-2.5 text-xs"
-                >
-                  {t("deleteSelected", { count: selected.size })}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectMode(true)}
-                  className="h-7 px-2.5 text-xs"
-                >
-                  {t("selectMode")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => void clearAll()}
-                  className="h-7 px-2.5 text-xs text-muted-foreground hover:text-destructive"
-                >
-                  {t("clearAll")}
-                </Button>
-              </>
-            )}
+          <div className="relative flex items-center gap-1.5 shrink-0">
+            {/* Normal mode buttons */}
+            <div className={cn(
+              "flex items-center gap-1.5 transition-all duration-200",
+              selectMode ? "opacity-0 pointer-events-none scale-95" : "opacity-100 scale-100"
+            )}>
+              <Button size="sm" variant="ghost" onClick={() => setSelectMode(true)} className="h-7 px-2.5 text-xs">
+                {t("selectMode")}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => void clearAll()} className="h-7 px-2.5 text-xs text-muted-foreground hover:text-destructive">
+                {t("clearAll")}
+              </Button>
+            </div>
+            {/* Select mode buttons */}
+            <div className={cn(
+              "absolute right-0 flex items-center gap-1.5 transition-all duration-200",
+              selectMode ? "opacity-100 scale-100" : "opacity-0 pointer-events-none scale-95"
+            )}>
+              <Button size="sm" variant="ghost" onClick={exitSelectMode} className="h-7 px-2.5 text-xs">
+                {t("selectCancel")}
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => void deleteSelected()} disabled={selected.size === 0} className="h-7 px-2.5 text-xs">
+                {t("deleteSelected", { count: selected.size })}
+              </Button>
+            </div>
           </div>
         </div>
         {dlList.length === 0 ? (
@@ -759,22 +748,28 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                   <li
                     key={dl.id}
                     onClick={selectMode ? () => toggleSelect(dl.id) : undefined}
+                    style={{ gap: selectMode ? "0.75rem" : "0px" }}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 bg-muted/40 text-sm transition-colors",
+                      "flex items-center rounded-lg px-3 py-2.5 bg-muted/40 text-sm",
+                      "transition-[gap,background-color,box-shadow] duration-200",
                       selectMode && "cursor-pointer",
                       selectMode && isSelected && "bg-primary/5 ring-1 ring-primary/20"
                     )}
                   >
-                    {selectMode && (
+                    {/* Checkbox — always rendered, width animates to avoid snap */}
+                    <div
+                      style={{ width: selectMode ? "1rem" : "0px", transition: "width 200ms ease-out" }}
+                      className="shrink-0 overflow-hidden"
+                    >
                       <div
                         className={cn(
-                          "shrink-0 size-4 rounded border-2 flex items-center justify-center transition-colors duration-150 animate-in zoom-in-50 fade-in-0 duration-150",
+                          "size-4 rounded border-2 flex items-center justify-center transition-colors duration-150",
                           isSelected ? "bg-ring border-ring" : "border-border"
                         )}
                       >
                         {isSelected && <Check className="size-2.5 text-white animate-in zoom-in-50 duration-100" />}
                       </div>
-                    )}
+                    </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <a
@@ -831,37 +826,40 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                         </p>
                       )}
                     </div>
-                    {!selectMode && (
-                      <div className="shrink-0 flex items-center gap-1">
-                        {isActive && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground mr-1">
-                            <Loader2 className="size-3.5 animate-spin" />
-                          </span>
-                        )}
-                        {canDownload && (
-                          <a href={`/api/downloads/${dl.id}/file?token=${dl.token}`}>
-                            <Button size="icon-sm" variant="ghost" title={t("titleDownload")}>
-                              <Download className="size-3.5 text-muted-foreground hover:text-primary" />
-                            </Button>
-                          </a>
-                        )}
-                        {canDelete && (
-                          <Button
-                            size="icon-sm"
-                            variant="ghost"
-                            onClick={() => deleteDownload(dl.id)}
-                            disabled={!!loading[`dl-delete-${dl.id}`]}
-                            title={isActive ? t("titleCancel") : t("titleDelete")}
-                          >
-                            {loading[`dl-delete-${dl.id}`] ? (
-                              <Loader2 className="size-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="size-3.5 text-muted-foreground hover:text-destructive" />
-                            )}
+                    <div
+                      className={cn(
+                        "shrink-0 flex items-center gap-1 transition-opacity duration-150",
+                        selectMode ? "opacity-0 pointer-events-none" : "opacity-100"
+                      )}
+                    >
+                      {isActive && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground mr-1">
+                          <Loader2 className="size-3.5 animate-spin" />
+                        </span>
+                      )}
+                      {canDownload && (
+                        <a href={`/api/downloads/${dl.id}/file?token=${dl.token}`}>
+                          <Button size="icon-sm" variant="ghost" title={t("titleDownload")}>
+                            <Download className="size-3.5 text-muted-foreground hover:text-primary" />
                           </Button>
-                        )}
-                      </div>
-                    )}
+                        </a>
+                      )}
+                      {canDelete && (
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          onClick={(e) => { e.stopPropagation(); void deleteDownload(dl.id); }}
+                          disabled={!!loading[`dl-delete-${dl.id}`]}
+                          title={isActive ? t("titleCancel") : t("titleDelete")}
+                        >
+                          {loading[`dl-delete-${dl.id}`] ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="size-3.5 text-muted-foreground hover:text-destructive" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </li>
                 );
               })}
