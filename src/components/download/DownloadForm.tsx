@@ -261,7 +261,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
 
       {/* Format yükleniyor */}
       {phase.type === "fetching" && (
-        <div className="flex items-center gap-3 py-2 text-muted-foreground">
+        <div className="flex items-center gap-3 py-2 text-muted-foreground animate-in fade-in-0 duration-200">
           <Loader2 className="size-4 animate-spin shrink-0" />
           <div className="min-w-0 flex-1">
             <span className="text-sm">{t("loading")}</span>
@@ -272,7 +272,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
 
       {/* Format seçimi */}
       {phase.type === "ready" && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
           {phase.info.thumbnail && (
             <div className="flex gap-3 items-start">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -292,7 +292,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
 
           {/* Çözünürlük seçimi */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {phase.info.formats.map((fmt) => {
+            {phase.info.formats.map((fmt, i) => {
               const isSelected = selectedQuality === fmt.quality;
               return (
                 <button
@@ -301,8 +301,9 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
                     setSelectedQuality(isSelected ? null : fmt.quality);
                     setSelectedVcodec(null);
                   }}
+                  style={{ animationDelay: `${i * 35}ms` }}
                   className={cn(
-                    "rounded-lg border px-3 py-2.5 text-left transition-colors cursor-pointer",
+                    "rounded-lg border px-3 py-2.5 text-left transition-colors cursor-pointer animate-in fade-in-0 slide-in-from-bottom-2 duration-200 [animation-fill-mode:backwards]",
                     isSelected
                       ? "border-primary bg-primary text-primary-foreground shadow-sm"
                       : "border-border bg-background hover:border-primary/30 hover:bg-primary/5"
@@ -423,7 +424,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
 
       {/* Progress */}
       {phase.type === "downloading" && (
-        <div className="space-y-3">
+        <div className="space-y-3 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
           <div className="flex items-center gap-2">
             <p className="font-heading text-sm font-semibold truncate flex-1">
               {phase.title ?? ""}
@@ -465,7 +466,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
 
       {/* Tamamlandı */}
       {phase.type === "completed" && (
-        <div className="space-y-3">
+        <div className="space-y-3 animate-in fade-in-0 zoom-in-95 duration-300">
           <div className="rounded-lg border border-border/60 bg-muted/30 p-3.5 flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 shrink-0">
               <CheckCircle className="size-5 text-primary" />
@@ -499,7 +500,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
 
       {/* İptal edildi */}
       {phase.type === "cancelled" && (
-        <div className="space-y-3">
+        <div className="space-y-3 animate-in fade-in-0 duration-200">
           <p className="text-sm text-muted-foreground">{t("cancelled")}</p>
           <Button variant="outline" size="lg" onClick={handleReset} className="w-full">
             {t("new")}
@@ -509,7 +510,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
 
       {/* Hata */}
       {phase.type === "error" && (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 space-y-1.5">
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 space-y-1.5 animate-in fade-in-0 slide-in-from-top-1 duration-200">
           <div className="flex items-center gap-2 text-sm text-destructive">
             <AlertCircle className="size-4 shrink-0" />
             <span>{phase.message}</span>

@@ -91,7 +91,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-10 w-80 rounded-xl border border-border bg-popover shadow-lg z-50 overflow-hidden">
+        <div className="absolute right-0 top-10 w-80 rounded-xl border border-border bg-popover shadow-lg z-50 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
             <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               {t("notificationsTitle")}

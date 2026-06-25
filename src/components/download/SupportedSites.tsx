@@ -80,8 +80,13 @@ export function SupportedSites() {
         {t("title")}
       </button>
 
-      {open && (
-        <div className="mt-3 space-y-3">
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-300 ease-in-out",
+          open ? "max-h-[600px] opacity-100 mt-3" : "max-h-0 opacity-0 pointer-events-none"
+        )}
+      >
+        <div className="space-y-3">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
             <Input
@@ -109,7 +114,7 @@ export function SupportedSites() {
 
           <p className="text-xs text-muted-foreground/60">{t("ytdlpNote")}</p>
         </div>
-      )}
+      </div>
     </div>
   );
 }

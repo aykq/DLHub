@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export interface AdminUser {
   id: string;
@@ -170,6 +171,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export function AdminDashboard({ initialStats, initialUsers, initialDownloads, initialSettings }: Props) {
   const t = useTranslations("admin");
+  const { confirm: askConfirm, ConfirmDialog } = useConfirm();
   const [stats, setStats] = useState<AdminStats>(initialStats);
   const [users, setUsers] = useState<AdminUser[]>(initialUsers);
   const [dlList, setDlList] = useState<AdminDownload[]>(initialDownloads);
@@ -284,7 +286,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
   }
 
   async function deleteUser(userId: string) {
-    if (!confirm(t("deleteUserConfirm"))) return;
+    if (!(await askConfirm({ message: t("deleteUserConfirm"), confirmLabel: t("titleDelete"), cancelLabel: t("selectCancel"), variant: "destructive" }))) return;
     const key = `user-delete-${userId}`;
     setItemLoading(key, true);
     try {
@@ -313,7 +315,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
 
   async function deleteSelected() {
     if (selected.size === 0) return;
-    if (!confirm(t("deleteSelectedConfirm", { count: selected.size }))) return;
+    if (!(await askConfirm({ message: t("deleteSelectedConfirm", { count: selected.size }), confirmLabel: t("titleDelete"), cancelLabel: t("selectCancel"), variant: "destructive" }))) return;
     const ids = Array.from(selected);
     const res = await fetch("/api/admin/downloads", {
       method: "DELETE",
@@ -331,7 +333,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       .filter((dl) => dl.status !== "downloading" && dl.status !== "pending")
       .map((dl) => dl.id);
     if (inactiveIds.length === 0) return;
-    if (!confirm(t("clearAllConfirm"))) return;
+    if (!(await askConfirm({ message: t("clearAllConfirm"), confirmLabel: t("clearAll"), cancelLabel: t("selectCancel"), variant: "destructive" }))) return;
     const res = await fetch("/api/admin/downloads", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -344,7 +346,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
   }
 
   async function deleteDownload(dlId: string) {
-    if (!confirm(t("deleteDownloadConfirm"))) return;
+    if (!(await askConfirm({ message: t("deleteDownloadConfirm"), confirmLabel: t("titleDelete"), cancelLabel: t("selectCancel"), variant: "destructive" }))) return;
     const key = `dl-delete-${dlId}`;
     setItemLoading(key, true);
     try {
@@ -363,6 +365,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
 
   return (
     <div className="space-y-6">
+      {ConfirmDialog}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -464,6 +467,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
         ))}
       </div>
 
+      <div key={activeTab} className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
       {/* Bekleyen Kullanıcılar */}
       {activeTab === "users" && pendingUsers.length > 0 && (
         <section className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-5 space-y-3">
@@ -764,11 +768,11 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
                     {selectMode && (
                       <div
                         className={cn(
-                          "shrink-0 size-4 rounded border-2 flex items-center justify-center transition-colors",
+                          "shrink-0 size-4 rounded border-2 flex items-center justify-center transition-colors duration-150 animate-in zoom-in-50 fade-in-0 duration-150",
                           isSelected ? "bg-ring border-ring" : "border-border"
                         )}
                       >
-                        {isSelected && <Check className="size-2.5 text-white" />}
+                        {isSelected && <Check className="size-2.5 text-white animate-in zoom-in-50 duration-100" />}
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
@@ -875,7 +879,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       </section>}
 
       {/* Ayarlar */}
-      {activeTab === "settings" && <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+      {activeTab === "settings" && <section className="rounded-xl border border-border bg-card p-5 space-y-4 animate-in fade-in-0 duration-200">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
           <Settings className="size-3.5" />
           {t("settingsSection")}
@@ -935,6 +939,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
           </div>
         </div>
       </section>}
+      </div>
     </div>
   );
 }

@@ -146,7 +146,7 @@ export function DownloadHistory({ initialDownloads }: Props) {
   if (downloads.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+    <div className="rounded-xl border border-border bg-card p-5 space-y-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           {t("title")}
@@ -200,9 +200,9 @@ export function DownloadHistory({ initialDownloads }: Props) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-3">{t("noResults")}</p>
+        <p className="text-xs text-muted-foreground text-center py-3 animate-in fade-in-0 duration-150">{t("noResults")}</p>
       ) : (
-      <div className="space-y-3">
+      <div key={statusFilter + query} className="space-y-3 animate-in fade-in-0 duration-150">
         {groupByDate(filtered, t("today"), t("yesterday")).map(({ label, items }) => (
           <div key={label} className="space-y-1">
             <p className="text-[0.7rem] font-semibold uppercase tracking-widest text-muted-foreground/50 px-1">
