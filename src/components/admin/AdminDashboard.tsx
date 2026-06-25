@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   BarChart2,
   Settings,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
@@ -180,6 +181,10 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [statsPeriod, setStatsPeriod] = useState<"7d" | "30d" | "all">("all");
   const [activeTab, setActiveTab] = useState<"users" | "downloads" | "settings">("users");
+  const PAGE_SIZE = 20;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   function setItemLoading(key: string, val: boolean) {
     setLoading((prev) => ({ ...prev, [key]: val }));
@@ -290,6 +295,51 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       }
     } finally {
       setItemLoading(key, false);
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelected(new Set());
+  }
+
+  async function deleteSelected() {
+    if (selected.size === 0) return;
+    if (!confirm(t("deleteSelectedConfirm", { count: selected.size }))) return;
+    const ids = Array.from(selected);
+    const res = await fetch("/api/admin/downloads", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    if (res.ok) {
+      setDlList((prev) => prev.map((dl) => ids.includes(dl.id) ? { ...dl, status: "expired" } : dl));
+      exitSelectMode();
+    }
+  }
+
+  async function clearAll() {
+    const inactiveIds = dlList
+      .filter((dl) => dl.status !== "downloading" && dl.status !== "pending")
+      .map((dl) => dl.id);
+    if (inactiveIds.length === 0) return;
+    if (!confirm(t("clearAllConfirm"))) return;
+    const res = await fetch("/api/admin/downloads", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: inactiveIds }),
+    });
+    if (res.ok) {
+      setDlList((prev) => prev.filter((dl) => dl.status === "downloading" || dl.status === "pending"));
+      setVisibleCount(PAGE_SIZE);
     }
   }
 
@@ -647,112 +697,180 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
 
       {/* İndirmeler */}
       {activeTab === "downloads" && <section className="rounded-xl border border-border bg-card p-5 space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-          <Download className="size-3.5" />
-          {t("downloadsSection")} ({dlList.length})
-        </h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 shrink-0">
+            <Download className="size-3.5" />
+            {t("downloadsSection")} ({dlList.length})
+          </h2>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {selectMode ? (
+              <>
+                <Button size="sm" variant="ghost" onClick={exitSelectMode} className="h-7 px-2.5 text-xs">
+                  {t("selectCancel")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => void deleteSelected()}
+                  disabled={selected.size === 0}
+                  className="h-7 px-2.5 text-xs"
+                >
+                  {t("deleteSelected", { count: selected.size })}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectMode(true)}
+                  className="h-7 px-2.5 text-xs"
+                >
+                  {t("selectMode")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void clearAll()}
+                  className="h-7 px-2.5 text-xs text-muted-foreground hover:text-destructive"
+                >
+                  {t("clearAll")}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
         {dlList.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("noDownloads")}</p>
         ) : (
-          <ul className="space-y-1.5">
-            {dlList.map((dl) => {
-              const isActive = dl.status === "downloading" || dl.status === "pending";
-              const canDelete = dl.status !== "expired";
-              const canDownload = dl.status === "completed" && !!dl.token &&
-                dl.expiresAt && new Date(dl.expiresAt) > new Date();
-              return (
-                <li
-                  key={dl.id}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 bg-muted/40 text-sm"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <a
-                        href={dl.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[0.8125rem] font-medium truncate hover:underline"
+          <>
+            <ul className="space-y-1.5">
+              {dlList.slice(0, visibleCount).map((dl) => {
+                const isActive = dl.status === "downloading" || dl.status === "pending";
+                const canDelete = dl.status !== "expired";
+                const canDownload = dl.status === "completed" && !!dl.token &&
+                  dl.expiresAt && new Date(dl.expiresAt) > new Date();
+                const isSelected = selected.has(dl.id);
+                return (
+                  <li
+                    key={dl.id}
+                    onClick={selectMode ? () => toggleSelect(dl.id) : undefined}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 bg-muted/40 text-sm transition-colors",
+                      selectMode && "cursor-pointer",
+                      selectMode && isSelected && "bg-primary/5 ring-1 ring-primary/20"
+                    )}
+                  >
+                    {selectMode && (
+                      <div
+                        className={cn(
+                          "shrink-0 size-4 rounded border-2 flex items-center justify-center transition-colors",
+                          isSelected ? "bg-ring border-ring" : "border-border"
+                        )}
                       >
-                        {dl.title ?? hostOf(dl.url)}
-                      </a>
-                      <StatusBadge status={dl.status} />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
-                      <span>{dl.userEmail ?? dl.userId.slice(0, 8)}</span>
-                      <span className="opacity-40">·</span>
-                      <span>{formatLabel(dl.format)}</span>
-                      {dl.fileSize && (
-                        <>
-                          <span className="opacity-40">·</span>
-                          <span>{fmtBytes(dl.fileSize)}</span>
-                        </>
-                      )}
-                      <span className="opacity-40">·</span>
-                      {(() => { const { display, full } = fmtDownloadTime(dl.createdAt, t); return <span title={full} className="cursor-default">{display}</span>; })()}
-                    </p>
-                    {(dl.width || dl.duration || dl.videoCodec) && (
-                      <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                        {dl.width && dl.height && <span>{dl.width}×{dl.height}</span>}
-                        {dl.duration && (
-                          <>
-                            {(dl.width || dl.height) && <span className="opacity-40">·</span>}
-                            <span>{fmtDuration(dl.duration)}</span>
-                          </>
-                        )}
-                        {dl.videoCodec && (
-                          <>
-                            {(dl.width || dl.duration) && <span className="opacity-40">·</span>}
-                            <span>{dl.videoCodec.toUpperCase()}</span>
-                          </>
-                        )}
-                        {dl.audioCodec && (
+                        {isSelected && <Check className="size-2.5 text-white" />}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <a
+                          href={dl.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => selectMode && e.preventDefault()}
+                          className="text-[0.8125rem] font-medium truncate hover:underline"
+                        >
+                          {dl.title ?? hostOf(dl.url)}
+                        </a>
+                        <StatusBadge status={dl.status} />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        <span>{dl.userEmail ?? dl.userId.slice(0, 8)}</span>
+                        <span className="opacity-40">·</span>
+                        <span>{formatLabel(dl.format)}</span>
+                        {dl.fileSize && (
                           <>
                             <span className="opacity-40">·</span>
-                            <span>{dl.audioCodec.toUpperCase()}</span>
+                            <span>{fmtBytes(dl.fileSize)}</span>
                           </>
                         )}
+                        <span className="opacity-40">·</span>
+                        {(() => { const { display, full } = fmtDownloadTime(dl.createdAt, t); return <span title={full} className="cursor-default">{display}</span>; })()}
                       </p>
-                    )}
-                    {dl.status === "error" && dl.errorMessage && (
-                      <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                        <AlertCircle className="size-3 shrink-0" />
-                        {dl.errorMessage.slice(0, 80)}
-                      </p>
-                    )}
-                  </div>
-                  <div className="shrink-0 flex items-center gap-1">
-                    {isActive && (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground mr-1">
-                        <Loader2 className="size-3.5 animate-spin" />
-                      </span>
-                    )}
-                    {canDownload && (
-                      <a href={`/api/downloads/${dl.id}/file?token=${dl.token}`}>
-                        <Button size="icon-sm" variant="ghost" title={t("titleDownload")}>
-                          <Download className="size-3.5 text-muted-foreground hover:text-primary" />
-                        </Button>
-                      </a>
-                    )}
-                    {canDelete && (
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        onClick={() => deleteDownload(dl.id)}
-                        disabled={!!loading[`dl-delete-${dl.id}`]}
-                        title={isActive ? t("titleCancel") : t("titleDelete")}
-                      >
-                        {loading[`dl-delete-${dl.id}`] ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <Trash2 className="size-3.5 text-muted-foreground hover:text-destructive" />
+                      {(dl.width || dl.duration || dl.videoCodec) && (
+                        <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                          {dl.width && dl.height && <span>{dl.width}×{dl.height}</span>}
+                          {dl.duration && (
+                            <>
+                              {(dl.width || dl.height) && <span className="opacity-40">·</span>}
+                              <span>{fmtDuration(dl.duration)}</span>
+                            </>
+                          )}
+                          {dl.videoCodec && (
+                            <>
+                              {(dl.width || dl.duration) && <span className="opacity-40">·</span>}
+                              <span>{dl.videoCodec.toUpperCase()}</span>
+                            </>
+                          )}
+                          {dl.audioCodec && (
+                            <>
+                              <span className="opacity-40">·</span>
+                              <span>{dl.audioCodec.toUpperCase()}</span>
+                            </>
+                          )}
+                        </p>
+                      )}
+                      {dl.status === "error" && dl.errorMessage && (
+                        <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                          <AlertCircle className="size-3 shrink-0" />
+                          {dl.errorMessage.slice(0, 80)}
+                        </p>
+                      )}
+                    </div>
+                    {!selectMode && (
+                      <div className="shrink-0 flex items-center gap-1">
+                        {isActive && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground mr-1">
+                            <Loader2 className="size-3.5 animate-spin" />
+                          </span>
                         )}
-                      </Button>
+                        {canDownload && (
+                          <a href={`/api/downloads/${dl.id}/file?token=${dl.token}`}>
+                            <Button size="icon-sm" variant="ghost" title={t("titleDownload")}>
+                              <Download className="size-3.5 text-muted-foreground hover:text-primary" />
+                            </Button>
+                          </a>
+                        )}
+                        {canDelete && (
+                          <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            onClick={() => deleteDownload(dl.id)}
+                            disabled={!!loading[`dl-delete-${dl.id}`]}
+                            title={isActive ? t("titleCancel") : t("titleDelete")}
+                          >
+                            {loading[`dl-delete-${dl.id}`] ? (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="size-3.5 text-muted-foreground hover:text-destructive" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                  </li>
+                );
+              })}
+            </ul>
+            {dlList.length > visibleCount && (
+              <button
+                onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                className="w-full text-xs text-muted-foreground hover:text-foreground py-2 border border-border/60 rounded-lg hover:bg-muted/40 transition-colors"
+              >
+                {t("loadMore", { count: dlList.length - visibleCount })}
+              </button>
+            )}
+          </>
         )}
       </section>}
 

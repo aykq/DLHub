@@ -1,8 +1,10 @@
 import { requireAdmin } from "@/lib/admin-guard";
 import { db } from "@/db";
 import { downloads, users } from "@/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { createDownloadToken } from "@/lib/download-token";
+import { cancelDownload } from "@/lib/ytdlp-download";
+import { unlink } from "fs/promises";
 
 export async function GET() {
   const adminId = await requireAdmin();
@@ -46,4 +48,37 @@ export async function GET() {
           : null,
     }))
   );
+}
+
+export async function DELETE(req: Request) {
+  const adminId = await requireAdmin();
+  if (!adminId) return Response.json({ error: "Forbidden" }, { status: 403 });
+
+  const body = await req.json() as { ids?: string[] };
+  const ids = body.ids;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return Response.json({ error: "No IDs provided" }, { status: 400 });
+  }
+
+  const rows = await db.query.downloads.findMany({
+    where: inArray(downloads.id, ids),
+    columns: { id: true, filePath: true, status: true },
+  });
+
+  for (const dl of rows) {
+    if (dl.status === "downloading" || dl.status === "pending") {
+      cancelDownload(dl.id);
+    }
+    if (dl.filePath) {
+      try { await unlink(dl.filePath); } catch { /* already deleted */ }
+    }
+  }
+
+  await db
+    .update(downloads)
+    .set({ status: "expired" })
+    .where(inArray(downloads.id, ids));
+
+  return Response.json({ ok: true, deleted: rows.length });
 }

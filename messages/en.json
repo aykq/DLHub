@@ -150,6 +150,13 @@
     "noNotifications": "No notifications",
     "tabUsers": "Users",
     "tabDownloads": "Downloads",
-    "tabSettings": "Settings"
+    "tabSettings": "Settings",
+    "selectMode": "Select",
+    "selectCancel": "Cancel",
+    "deleteSelected": "Delete Selected ({count})",
+    "deleteSelectedConfirm": "Delete {count} record(s)? This cannot be undone.",
+    "clearAll": "Clear All",
+    "clearAllConfirm": "All inactive downloads will be deleted. Are you sure?",
+    "loadMore": "Load More ({count})"
   }
 }

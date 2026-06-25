@@ -150,6 +150,13 @@
     "noNotifications": "Bildirim yok",
     "tabUsers": "Kullanıcılar",
     "tabDownloads": "İndirmeler",
-    "tabSettings": "Ayarlar"
+    "tabSettings": "Ayarlar",
+    "selectMode": "Seç",
+    "selectCancel": "İptal",
+    "deleteSelected": "Seçilenleri Sil ({count})",
+    "deleteSelectedConfirm": "{count} kayıt silinecek. Emin misiniz?",
+    "clearAll": "Tümünü Temizle",
+    "clearAllConfirm": "Aktif indirmeler hariç tüm kayıtlar silinecek. Emin misiniz?",
+    "loadMore": "Daha Fazla Göster ({count})"
   }
 }
