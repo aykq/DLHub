@@ -277,7 +277,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
             <div className="flex gap-3 items-start">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={phase.info.thumbnail}
+                src={`/api/proxy/thumbnail?url=${encodeURIComponent(phase.info.thumbnail)}`}
                 alt=""
                 className="w-24 h-14 object-cover rounded-md shrink-0 bg-muted"
               />
