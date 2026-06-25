@@ -1,5 +1,4 @@
 import { spawn, execFile, type ChildProcess } from "child_process";
-import { existsSync } from "fs";
 import { readdir, stat } from "fs/promises";
 import path from "path";
 import { promisify } from "util";
@@ -7,7 +6,6 @@ import { promisify } from "util";
 const execFileAsync = promisify(execFile);
 
 const DOWNLOADS_PATH = process.env.DOWNLOADS_PATH ?? "/downloads";
-const VK_COOKIES_PATH = path.join(DOWNLOADS_PATH, "cookies", "vk.txt");
 
 export interface DownloadProgress {
   status: "pending" | "downloading" | "finished" | "error";
@@ -183,8 +181,6 @@ export function startDownload(
   const outputTemplate = path.join(DOWNLOADS_PATH, `${downloadId}_%(title)s.%(ext)s`);
   const formatArgs = buildFormatArgs(quality, ext, vcodec, acodec);
 
-  const isVk = url.includes("vk.com") || url.includes("vk.ru");
-  const useCookies = isVk && existsSync(VK_COOKIES_PATH);
   const args = [
     ...formatArgs,
     "--output", outputTemplate,
@@ -192,7 +188,6 @@ export function startDownload(
     "--no-playlist",
     "--socket-timeout", "30",
     "--js-runtimes", "node",
-    ...(useCookies ? ["--cookies", VK_COOKIES_PATH] : []),
     url,
   ];
 

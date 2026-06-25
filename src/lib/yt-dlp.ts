@@ -1,12 +1,8 @@
 import { execFile } from "child_process";
-import { existsSync } from "fs";
 import path from "path";
 import { promisify } from "util";
 
 const execFileAsync = promisify(execFile);
-
-const DOWNLOADS_PATH = process.env.DOWNLOADS_PATH ?? "/downloads";
-const VK_COOKIES_PATH = path.join(DOWNLOADS_PATH, "cookies", "vk.txt");
 
 interface RawFormat {
   ext: string;
@@ -80,16 +76,9 @@ export async function getVideoInfo(url: string): Promise<{
   thumbnail: string | null;
   duration: number | null;
 }> {
-  const isVk = url.includes("vk.com") || url.includes("vk.ru");
-  const useCookies = isVk && existsSync(VK_COOKIES_PATH);
-
   const { stdout } = await execFileAsync(
     "yt-dlp",
-    [
-      "-j", "--no-playlist", "--socket-timeout", "30",
-      ...(useCookies ? ["--cookies", VK_COOKIES_PATH] : []),
-      url,
-    ],
+    ["-j", "--no-playlist", "--socket-timeout", "30", url],
     { timeout: 60_000, maxBuffer: 10 * 1024 * 1024 }
   );
 
