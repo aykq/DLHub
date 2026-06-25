@@ -48,7 +48,10 @@
     "retry": "Tekrar dene",
     "iosNote": "Dosyanız Files uygulamasına inecektir.",
     "notificationTitle": "DLHub — İndirme Tamamlandı",
-    "notificationBody": "Dosyanız hazır"
+    "notificationBody": "Dosyanız hazır",
+    "cancel": "İptal Et",
+    "cancelling": "İptal ediliyor…",
+    "cancelled": "İndirme iptal edildi"
   },
   "history": {
     "title": "Geçmiş",
@@ -61,7 +64,9 @@
     "noResults": "Sonuç bulunamadı",
     "downloading": "İndiriliyor",
     "error": "Hata",
-    "expired": "Süresi doldu"
+    "expired": "Süresi doldu",
+    "filterCancelled": "İptal Edildi",
+    "cancelled": "İptal edildi"
   },
   "sites": {
     "title": "Desteklenen Siteler",
@@ -123,6 +128,7 @@
     "statusCompleted": "Tamamlandı",
     "statusError": "Hata",
     "statusExpired": "Süresi Doldu",
+    "statusCancelled": "İptal Edildi",
     "timeNow": "az önce",
     "timeMin": "{count}dk",
     "timeHour": "{count}s",

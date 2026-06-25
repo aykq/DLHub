@@ -48,7 +48,10 @@
     "retry": "Try again",
     "iosNote": "Your file will be saved to the Files app.",
     "notificationTitle": "DLHub — Download Complete",
-    "notificationBody": "Your file is ready"
+    "notificationBody": "Your file is ready",
+    "cancel": "Cancel",
+    "cancelling": "Cancelling…",
+    "cancelled": "Download cancelled"
   },
   "history": {
     "title": "History",
@@ -61,7 +64,9 @@
     "noResults": "No results found",
     "downloading": "Downloading",
     "error": "Error",
-    "expired": "Expired"
+    "expired": "Expired",
+    "filterCancelled": "Cancelled",
+    "cancelled": "Cancelled"
   },
   "sites": {
     "title": "Supported Sites",
@@ -123,6 +128,7 @@
     "statusCompleted": "Completed",
     "statusError": "Error",
     "statusExpired": "Expired",
+    "statusCancelled": "Cancelled",
     "timeNow": "just now",
     "timeMin": "{count}m",
     "timeHour": "{count}h",
