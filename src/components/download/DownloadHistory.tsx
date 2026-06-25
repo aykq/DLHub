@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
-import { fmtBytes, fmtDuration } from "@/lib/format";
+import { fmtBytes, fmtDuration, formatLabel, hostOf } from "@/lib/format";
 
 export interface DownloadRecord {
   id: string;
@@ -42,24 +42,7 @@ function fmtDateTime(dateStr: string, todayLabel: string, yesterdayLabel: string
   return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) + `, ${time}`;
 }
 
-const VCODEC_NAMES: Record<string, string> = { av01: "AV1", vp09: "VP9", avc1: "H.264", hev1: "HEVC", vp08: "VP8" };
 
-function formatLabel(id: string): string {
-  const match = id.match(/^(\d+|best)_(mp4|mp3|mkv|webm)(?:_(av01|vp09|avc1|hev1|vp08))?(?:_(aac|opus))?$/);
-  if (!match) return id;
-  const [, quality, ext, vcodec, acodec] = match;
-  if (ext === "mp3") return "MP3";
-  const parts: string[] = [quality === "best" ? "Best" : `${quality}p`, ext.toUpperCase()];
-  if (vcodec) parts.push(VCODEC_NAMES[vcodec] ?? vcodec.toUpperCase());
-  if (acodec) parts.push(acodec.toUpperCase());
-  return parts.join(" · ");
-}
-
-
-function hostOf(url: string): string {
-  try { return new URL(url).hostname.replace(/^www\./, ""); }
-  catch { return url.slice(0, 40); }
-}
 
 function groupByDate(
   items: DownloadRecord[],
