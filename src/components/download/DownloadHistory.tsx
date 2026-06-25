@@ -74,6 +74,32 @@ function hostOf(url: string): string {
   catch { return url.slice(0, 40); }
 }
 
+function groupByDate(
+  items: DownloadRecord[],
+  todayLabel: string,
+  yesterdayLabel: string,
+): { label: string; items: DownloadRecord[] }[] {
+  const groups = new Map<string, DownloadRecord[]>();
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  for (const dl of items) {
+    const date = new Date(dl.createdAt);
+    let key: string;
+    if (date.toDateString() === now.toDateString()) key = todayLabel;
+    else if (date.toDateString() === yesterday.toDateString()) key = yesterdayLabel;
+    else key = date.toLocaleDateString(undefined, {
+      day: "numeric", month: "long",
+      ...(date.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}),
+    });
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(dl);
+  }
+
+  return Array.from(groups.entries()).map(([label, items]) => ({ label, items }));
+}
+
 const STATUS_FILTER_KEYS = ["all", "completed", "error", "cancelled", "expired"] as const;
 
 type StatusFilter = (typeof STATUS_FILTER_KEYS)[number];
@@ -176,101 +202,108 @@ export function DownloadHistory({ initialDownloads }: Props) {
       {filtered.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-3">{t("noResults")}</p>
       ) : (
-      <ul className="space-y-1.5">
-        {filtered.map((dl) => {
-          const isActive = dl.status === "downloading" || dl.status === "pending";
-          const isExpired = dl.status === "expired" ||
-            (dl.status === "completed" && dl.expiresAt && new Date(dl.expiresAt) <= new Date());
-          const canDownload = dl.status === "completed" && !!dl.token && !isExpired;
+      <div className="space-y-3">
+        {groupByDate(filtered, t("today"), t("yesterday")).map(({ label, items }) => (
+          <div key={label} className="space-y-1">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-widest text-muted-foreground/50 px-1">
+              {label}
+            </p>
+            <ul className="space-y-1">
+              {items.map((dl) => {
+                const isActive = dl.status === "downloading" || dl.status === "pending";
+                const isExpired = dl.status === "expired" ||
+                  (dl.status === "completed" && dl.expiresAt && new Date(dl.expiresAt) <= new Date());
+                const canDownload = dl.status === "completed" && !!dl.token && !isExpired;
 
-          return (
-            <li
-              key={dl.id}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 bg-muted/40 text-sm"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-[0.8125rem]">
-                  {dl.title ?? hostOf(dl.url)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
-                  <span className="font-medium">{formatLabel(dl.format)}</span>
-                  {dl.fileSize && (
-                    <>
-                      <span className="opacity-40">·</span>
-                      <span>{fileSize(dl.fileSize)}</span>
-                    </>
-                  )}
-                  <span className="opacity-40">·</span>
-                  <a
-                    href={dl.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors"
+                return (
+                  <li
+                    key={dl.id}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 bg-muted/40 text-sm"
                   >
-                    {hostOf(dl.url)}
-                    <ExternalLink className="size-2.5 opacity-60" />
-                  </a>
-                  <span className="opacity-40">·</span>
-                  <span>{fmtDateTime(dl.createdAt, t("today"), t("yesterday"))}</span>
-                </p>
-                {(dl.width || dl.duration || dl.videoCodec) && (
-                  <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                    {dl.width && dl.height && <span>{dl.width}×{dl.height}</span>}
-                    {dl.duration && (
-                      <>
-                        {(dl.width || dl.height) && <span className="opacity-40">·</span>}
-                        <span>{fmtDuration(dl.duration)}</span>
-                      </>
-                    )}
-                    {dl.videoCodec && (
-                      <>
-                        {(dl.width || dl.duration) && <span className="opacity-40">·</span>}
-                        <span>{dl.videoCodec.toUpperCase()}</span>
-                      </>
-                    )}
-                    {dl.audioCodec && (
-                      <>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-[0.8125rem]">
+                        {dl.title ?? hostOf(dl.url)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono font-medium">{formatLabel(dl.format)}</span>
+                        {dl.fileSize && (
+                          <>
+                            <span className="opacity-40">·</span>
+                            <span className="font-mono">{fileSize(dl.fileSize)}</span>
+                          </>
+                        )}
                         <span className="opacity-40">·</span>
-                        <span>{dl.audioCodec.toUpperCase()}</span>
-                      </>
-                    )}
-                  </p>
-                )}
-              </div>
+                        <a
+                          href={dl.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors"
+                        >
+                          {hostOf(dl.url)}
+                          <ExternalLink className="size-2.5 opacity-60" />
+                        </a>
+                      </p>
+                      {(dl.width || dl.duration || dl.videoCodec) && (
+                        <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5 font-mono flex-wrap">
+                          {dl.width && dl.height && <span>{dl.width}×{dl.height}</span>}
+                          {dl.duration && (
+                            <>
+                              {(dl.width || dl.height) && <span className="opacity-40">·</span>}
+                              <span>{fmtDuration(dl.duration)}</span>
+                            </>
+                          )}
+                          {dl.videoCodec && (
+                            <>
+                              {(dl.width || dl.duration) && <span className="opacity-40">·</span>}
+                              <span>{dl.videoCodec.toUpperCase()}</span>
+                            </>
+                          )}
+                          {dl.audioCodec && (
+                            <>
+                              <span className="opacity-40">·</span>
+                              <span>{dl.audioCodec.toUpperCase()}</span>
+                            </>
+                          )}
+                        </p>
+                      )}
+                    </div>
 
-              <div className="shrink-0">
-                {isActive ? (
-                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Loader2 className="size-3.5 animate-spin" />
-                    {t("downloading")}
-                  </span>
-                ) : canDownload ? (
-                  <a href={`/api/downloads/${dl.id}/file?token=${dl.token}`}>
-                    <Button size="icon-sm" variant="outline" aria-label="İndir">
-                      <Download className="size-3.5" />
-                    </Button>
-                  </a>
-                ) : dl.status === "error" ? (
-                  <span className="flex items-center gap-1 text-xs text-destructive">
-                    <AlertCircle className="size-3.5" />
-                    {t("error")}
-                  </span>
-                ) : dl.status === "cancelled" ? (
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground/60">
-                    <X className="size-3.5" />
-                    {t("cancelled")}
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground/60">
-                    <Clock className="size-3.5" />
-                    {t("expired")}
-                  </span>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+                    <div className="shrink-0">
+                      {isActive ? (
+                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Loader2 className="size-3.5 animate-spin" />
+                          {t("downloading")}
+                        </span>
+                      ) : canDownload ? (
+                        <a href={`/api/downloads/${dl.id}/file?token=${dl.token}`}>
+                          <Button size="icon-sm" variant="outline" aria-label="İndir">
+                            <Download className="size-3.5" />
+                          </Button>
+                        </a>
+                      ) : dl.status === "error" ? (
+                        <span className="flex items-center gap-1 text-xs text-destructive">
+                          <AlertCircle className="size-3.5" />
+                          {t("error")}
+                        </span>
+                      ) : dl.status === "cancelled" ? (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground/60">
+                          <X className="size-3.5" />
+                          {t("cancelled")}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground/60">
+                          <Clock className="size-3.5" />
+                          {t("expired")}
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
       )}
     </div>
   );
