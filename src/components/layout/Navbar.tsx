@@ -26,11 +26,13 @@ export async function Navbar({ maxWidth = "max-w-2xl", extraActions }: NavbarPro
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
       <div className={`mx-auto ${maxWidth} px-4 h-14 flex items-center justify-between`}>
-        <Link href="/" className="flex items-center gap-2 font-bold text-base select-none">
-          <Download className="size-4" />
-          DLHub
+        <Link href="/" className="flex items-center gap-2 select-none group">
+          <div className="flex size-7 items-center justify-center rounded-lg bg-foreground text-background transition-transform group-hover:scale-105">
+            <Download className="size-3.5" />
+          </div>
+          <span className="font-heading font-extrabold text-base tracking-tight">DLHub</span>
         </Link>
 
         <div className="flex items-center gap-2">
