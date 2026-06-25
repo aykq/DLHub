@@ -143,6 +143,7 @@ function StatusBadge({ status }: { status: string }) {
     completed: "bg-green-500/15 text-green-600 dark:text-green-400",
     error: "bg-destructive/15 text-destructive",
     expired: "bg-muted text-muted-foreground",
+    cancelled: "bg-muted text-muted-foreground",
   };
   const labels: Record<string, string> = {
     pending: t("statusPending"),
@@ -152,6 +153,7 @@ function StatusBadge({ status }: { status: string }) {
     completed: t("statusCompleted"),
     error: t("statusError"),
     expired: t("statusExpired"),
+    cancelled: t("statusCancelled"),
   };
   return (
     <span
