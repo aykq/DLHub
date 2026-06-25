@@ -459,7 +459,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1.5">
+      <div role="tablist" className="flex gap-1.5">
         {(
           [
             { key: "users", label: t("tabUsers"), badge: pendingUsers.length },
@@ -469,6 +469,8 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
         ).map(({ key, label, badge }) => (
           <button
             key={key}
+            role="tab"
+            aria-selected={activeTab === key}
             onClick={() => setActiveTab(key)}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer",

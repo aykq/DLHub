@@ -291,6 +291,8 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
                     setSelectedQuality(isSelected ? null : fmt.quality);
                     setSelectedVcodec(null);
                   }}
+                  aria-label={fmt.label.split(" — ")[0]}
+                  aria-pressed={isSelected}
                   style={{ animationDelay: `${i * 35}ms` }}
                   className={cn(
                     "rounded-lg border px-3 py-2.5 text-left transition-colors cursor-pointer animate-in fade-in-0 slide-in-from-bottom-2 duration-200 [animation-fill-mode:backwards]",
