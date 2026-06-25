@@ -1,28 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Users,
-  Download,
-  HardDrive,
-  Clock,
-  RefreshCw,
-  Trash2,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  AlertCircle,
-  ShieldCheck,
-  BarChart2,
-  Settings,
-  Check,
-} from "lucide-react";
+import { Users, Download, HardDrive, Clock, RefreshCw, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { fmtBytes } from "@/lib/format";
+import { AdminUsersTab } from "./AdminUsersTab";
+import { AdminDownloadsTab } from "./AdminDownloadsTab";
+import { AdminSettingsTab } from "./AdminSettingsTab";
 
 export interface AdminUser {
   id: string;
@@ -79,116 +66,19 @@ interface Props {
   initialSettings: AdminSettings;
 }
 
-
-type TFn = ReturnType<typeof useTranslations<"admin">>;
-
-function fmtDownloadTime(dateStr: string, t: TFn): { display: string; full: string } {
-  const date = new Date(dateStr);
-  const diff = Date.now() - date.getTime();
-  const m = Math.floor(diff / 60000);
-  const full = date.toLocaleString(undefined, {
-    day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
-  });
-  if (m < 1) return { display: t("timeNow"), full };
-  if (m < 60) return { display: t("timeMin", { count: m }), full };
-  const h = Math.floor(m / 60);
-  if (h < 24) return { display: t("timeHour", { count: h }), full };
-  const display = date.toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    ...(date.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}),
-  });
-  return { display, full };
-}
-
-const VCODEC_NAMES: Record<string, string> = { av01: "AV1", vp09: "VP9", avc1: "H.264", hev1: "HEVC", vp08: "VP8" };
-
-function formatLabel(id: string): string {
-  const match = id.match(/^(\d+|best)_(mp4|mp3|mkv|webm)(?:_(av01|vp09|avc1|hev1|vp08))?(?:_(aac|opus))?$/);
-  if (!match) return id;
-  const [, quality, ext, vcodec, acodec] = match;
-  if (ext === "mp3") return "MP3";
-  const parts: string[] = [quality === "best" ? "Best" : `${quality}p`, ext.toUpperCase()];
-  if (vcodec) parts.push(VCODEC_NAMES[vcodec] ?? vcodec.toUpperCase());
-  if (acodec) parts.push(acodec.toUpperCase());
-  return parts.join(" · ");
-}
-
-function fmtDuration(secs: number): string {
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = secs % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url.slice(0, 30);
-  }
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const t = useTranslations("admin");
-  const map: Record<string, string> = {
-    pending: "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400",
-    approved: "bg-green-500/15 text-green-600 dark:text-green-400",
-    blocked: "bg-destructive/15 text-destructive",
-    downloading: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
-    completed: "bg-green-500/15 text-green-600 dark:text-green-400",
-    error: "bg-destructive/15 text-destructive",
-    expired: "bg-muted text-muted-foreground",
-    cancelled: "bg-muted text-muted-foreground",
-  };
-  const labels: Record<string, string> = {
-    pending: t("statusPending"),
-    approved: t("statusApproved"),
-    blocked: t("statusBlocked"),
-    downloading: t("statusDownloading"),
-    completed: t("statusCompleted"),
-    error: t("statusError"),
-    expired: t("statusExpired"),
-    cancelled: t("statusCancelled"),
-  };
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center px-1.5 py-0.5 rounded text-[0.7rem] font-medium",
-        map[status] ?? "bg-muted text-muted-foreground"
-      )}
-    >
-      {labels[status] ?? status}
-    </span>
-  );
-}
-
 export function AdminDashboard({ initialStats, initialUsers, initialDownloads, initialSettings }: Props) {
   const t = useTranslations("admin");
   const { confirm: askConfirm, ConfirmDialog } = useConfirm();
   const [stats, setStats] = useState<AdminStats>(initialStats);
   const [users, setUsers] = useState<AdminUser[]>(initialUsers);
   const [dlList, setDlList] = useState<AdminDownload[]>(initialDownloads);
-  const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const [cronLoading, setCronLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cronResult, setCronResult] = useState<string | null>(null);
-  const [settingsForm, setSettingsForm] = useState<AdminSettings>(initialSettings);
-  const [settingsSaving, setSettingsSaving] = useState(false);
-  const [settingsSaved, setSettingsSaved] = useState(false);
   const [statsPeriod, setStatsPeriod] = useState<"7d" | "30d" | "all">("all");
   const [activeTab, setActiveTab] = useState<"users" | "downloads" | "settings">("users");
-  const PAGE_SIZE = 7;
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const prevVisibleRef = useRef(PAGE_SIZE);
-  const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [userSelectMode, setUserSelectMode] = useState(false);
-  const [userSelected, setUserSelected] = useState<Set<string>>(new Set());
 
-  function setItemLoading(key: string, val: boolean) {
-    setLoading((prev) => ({ ...prev, [key]: val }));
-  }
+  const pendingUsers = users.filter((u) => u.status === "pending");
 
   const refresh = useCallback(async (period?: string, silent = false) => {
     if (!silent) setIsRefreshing(true);
@@ -213,35 +103,20 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
     return () => clearInterval(id);
   }, [refresh]);
 
-  async function changePeriod(period: "7d" | "30d" | "all") {
-    setStatsPeriod(period);
-    const statsRes = await fetch(`/api/admin/stats?period=${period}`);
-    if (statsRes.ok) setStats(await statsRes.json() as AdminStats);
-  }
-
-  async function saveSettings() {
-    setSettingsSaving(true);
-    setSettingsSaved(false);
-    try {
-      const res = await fetch("/api/admin/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settingsForm),
-      });
-      if (res.ok) setSettingsSaved(true);
-    } finally {
-      setSettingsSaving(false);
-    }
-  }
-
   useEffect(() => {
     function handleNotification() { void refresh(); }
     window.addEventListener("dlhub:notification", handleNotification);
     return () => window.removeEventListener("dlhub:notification", handleNotification);
   }, [refresh]);
 
+  async function changePeriod(period: "7d" | "30d" | "all") {
+    setStatsPeriod(period);
+    const statsRes = await fetch(`/api/admin/stats?period=${period}`);
+    if (statsRes.ok) setStats(await statsRes.json() as AdminStats);
+  }
+
   async function runCron() {
-    setItemLoading("cron", true);
+    setCronLoading(true);
     setCronResult(null);
     try {
       const res = await fetch("/api/admin/cron/run", { method: "POST" });
@@ -256,171 +131,25 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
         setCronResult(t("cronError", { error: data.error ?? "unknown" }));
       }
     } finally {
-      setItemLoading("cron", false);
+      setCronLoading(false);
     }
   }
-
-  async function updateUserStatus(userId: string, status: string) {
-    const key = `user-${userId}-${status}`;
-    setItemLoading(key, true);
-    try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if (res.ok) {
-        setUsers((prev) =>
-          prev.map((u) => (u.id === userId ? { ...u, status } : u))
-        );
-        setStats((prev) => ({
-          ...prev,
-          pendingUsers: prev.pendingUsers + (status === "approved" ? -1 : 0),
-        }));
-      }
-    } finally {
-      setItemLoading(key, false);
-    }
-  }
-
-  async function deleteUser(userId: string) {
-    if (!(await askConfirm({ message: t("deleteUserConfirm"), confirmLabel: t("titleDelete"), cancelLabel: t("selectCancel"), variant: "destructive" }))) return;
-    const key = `user-delete-${userId}`;
-    setItemLoading(key, true);
-    try {
-      const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
-      if (res.ok) {
-        setUsers((prev) => prev.filter((u) => u.id !== userId));
-        setStats((prev) => ({ ...prev, totalUsers: prev.totalUsers - 1 }));
-      }
-    } finally {
-      setItemLoading(key, false);
-    }
-  }
-
-  function toggleUserSelect(id: string) {
-    setUserSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }
-
-  function exitUserSelectMode() {
-    setUserSelectMode(false);
-    setUserSelected(new Set());
-  }
-
-  async function deleteSelectedUsers() {
-    if (userSelected.size === 0) return;
-    if (!(await askConfirm({ message: t("deleteSelectedConfirm", { count: userSelected.size }), confirmLabel: t("titleDelete"), cancelLabel: t("selectCancel"), variant: "destructive" }))) return;
-    const ids = Array.from(userSelected);
-    const res = await fetch("/api/admin/users", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids }),
-    });
-    if (res.ok) {
-      setUsers((prev) => prev.filter((u) => !ids.includes(u.id)));
-      setStats((prev) => ({ ...prev, totalUsers: prev.totalUsers - ids.length }));
-      exitUserSelectMode();
-    }
-  }
-
-  function toggleSelect(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }
-
-  function exitSelectMode() {
-    setSelectMode(false);
-    setSelected(new Set());
-  }
-
-  async function deleteSelected() {
-    if (selected.size === 0) return;
-    if (!(await askConfirm({ message: t("deleteSelectedConfirm", { count: selected.size }), confirmLabel: t("titleDelete"), cancelLabel: t("selectCancel"), variant: "destructive" }))) return;
-    const ids = Array.from(selected);
-    const res = await fetch("/api/admin/downloads", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids }),
-    });
-    if (res.ok) {
-      setDlList((prev) => prev.map((dl) => ids.includes(dl.id) ? { ...dl, status: "expired" } : dl));
-      exitSelectMode();
-    }
-  }
-
-  async function clearAll() {
-    const inactiveIds = dlList
-      .filter((dl) => dl.status !== "downloading" && dl.status !== "pending")
-      .map((dl) => dl.id);
-    if (inactiveIds.length === 0) return;
-    if (!(await askConfirm({ message: t("clearAllConfirm"), confirmLabel: t("clearAll"), cancelLabel: t("selectCancel"), variant: "destructive" }))) return;
-    const res = await fetch("/api/admin/downloads", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: inactiveIds }),
-    });
-    if (res.ok) {
-      setDlList((prev) => prev.filter((dl) => dl.status === "downloading" || dl.status === "pending"));
-      setVisibleCount(PAGE_SIZE);
-    }
-  }
-
-  async function deleteDownload(dlId: string) {
-    if (!(await askConfirm({ message: t("deleteDownloadConfirm"), confirmLabel: t("titleDelete"), cancelLabel: t("selectCancel"), variant: "destructive" }))) return;
-    const key = `dl-delete-${dlId}`;
-    setItemLoading(key, true);
-    try {
-      const res = await fetch(`/api/admin/downloads/${dlId}`, { method: "DELETE" });
-      if (res.ok) {
-        setDlList((prev) =>
-          prev.map((dl) => (dl.id === dlId ? { ...dl, status: "expired" } : dl))
-        );
-      }
-    } finally {
-      setItemLoading(key, false);
-    }
-  }
-
-  const pendingUsers = users.filter((u) => u.status === "pending");
 
   return (
     <div className="space-y-6">
       {ConfirmDialog}
-      {/* Header */}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">{t("title")}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{t("subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={runCron}
-            disabled={!!loading["cron"]}
-            className="gap-1.5"
-          >
-            {loading["cron"] ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Clock className="size-3.5" />
-            )}
+          <Button variant="outline" size="sm" onClick={runCron} disabled={cronLoading} className="gap-1.5">
+            {cronLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Clock className="size-3.5" />}
             {t("cleanup")}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void refresh()}
-            disabled={isRefreshing}
-            className="gap-1.5"
-          >
+          <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={isRefreshing} className="gap-1.5">
             <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} />
             {t("refresh")}
           </Button>
@@ -433,32 +162,13 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
         </div>
       )}
 
-      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard
-          icon={<Users className="size-4" />}
-          label={t("statUsers")}
-          value={stats.totalUsers}
-        />
-        <StatCard
-          icon={<Clock className="size-4 text-yellow-500" />}
-          label={t("statPending")}
-          value={stats.pendingUsers}
-          highlight={stats.pendingUsers > 0}
-        />
-        <StatCard
-          icon={<Download className="size-4 text-blue-500" />}
-          label={t("statActive")}
-          value={stats.activeDownloads}
-        />
-        <StatCard
-          icon={<HardDrive className="size-4" />}
-          label={t("statDisk")}
-          value={stats.diskUsage !== null ? fmtBytes(stats.diskUsage) : "—"}
-        />
+        <StatCard icon={<Users className="size-4" />} label={t("statUsers")} value={stats.totalUsers} />
+        <StatCard icon={<Clock className="size-4 text-yellow-500" />} label={t("statPending")} value={stats.pendingUsers} highlight={stats.pendingUsers > 0} />
+        <StatCard icon={<Download className="size-4 text-blue-500" />} label={t("statActive")} value={stats.activeDownloads} />
+        <StatCard icon={<HardDrive className="size-4" />} label={t("statDisk")} value={stats.diskUsage !== null ? fmtBytes(stats.diskUsage) : "—"} />
       </div>
 
-      {/* Tab bar */}
       <div role="tablist" className="flex gap-1.5">
         {(
           [
@@ -481,14 +191,10 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
           >
             {label}
             {badge > 0 && (
-              <span
-                className={cn(
-                  "inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] rounded-full text-[0.6rem] font-bold px-1",
-                  activeTab === key
-                    ? "bg-white/20 text-primary-foreground"
-                    : "bg-yellow-500 text-white"
-                )}
-              >
+              <span className={cn(
+                "inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] rounded-full text-[0.6rem] font-bold px-1",
+                activeTab === key ? "bg-white/20 text-primary-foreground" : "bg-yellow-500 text-white"
+              )}>
                 {badge}
               </span>
             )}
@@ -497,484 +203,27 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
       </div>
 
       <div key={activeTab} className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
-      {/* Bekleyen Kullanıcılar */}
-      {activeTab === "users" && pendingUsers.length > 0 && (
-        <section className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-5 space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-yellow-600 dark:text-yellow-400 flex items-center gap-1.5">
-            <Clock className="size-3.5" />
-            {t("pendingSection")} ({pendingUsers.length})
-          </h2>
-          <ul className="space-y-2">
-            {pendingUsers.map((u) => (
-              <li
-                key={u.id}
-                className="flex items-center gap-3 rounded-lg bg-background border border-border px-4 py-3"
-              >
-                {u.image && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={u.image} alt="" className="size-8 rounded-full shrink-0" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{u.name ?? "—"}</p>
-                  <p className="text-xs text-muted-foreground truncate">{u.email}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    size="sm"
-                    onClick={() => updateUserStatus(u.id, "approved")}
-                    disabled={!!loading[`user-${u.id}-approved`]}
-                    className="gap-1"
-                  >
-                    {loading[`user-${u.id}-approved`] ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <CheckCircle className="size-3.5" />
-                    )}
-                    {t("approve")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => updateUserStatus(u.id, "blocked")}
-                    disabled={!!loading[`user-${u.id}-blocked`]}
-                    className="gap-1"
-                  >
-                    {loading[`user-${u.id}-blocked`] ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <XCircle className="size-3.5" />
-                    )}
-                    {t("reject")}
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* Tüm Kullanıcılar */}
-      {activeTab === "users" && <section className="rounded-xl border border-border bg-card p-5 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 shrink-0">
-            <Users className="size-3.5" />
-            {t("allUsers")} ({users.length})
-          </h2>
-          <div className="relative flex items-center gap-1.5 shrink-0">
-            <div className={cn(
-              "flex items-center gap-1.5 transition-all duration-200",
-              userSelectMode ? "opacity-0 pointer-events-none scale-95" : "opacity-100 scale-100"
-            )}>
-              <Button size="sm" variant="ghost" onClick={() => setUserSelectMode(true)} className="h-7 px-2.5 text-xs">
-                {t("selectMode")}
-              </Button>
-            </div>
-            <div className={cn(
-              "absolute right-0 flex items-center gap-1.5 transition-all duration-200",
-              userSelectMode ? "opacity-100 scale-100" : "opacity-0 pointer-events-none scale-95"
-            )}>
-              <Button size="sm" variant="ghost" onClick={exitUserSelectMode} className="h-7 px-2.5 text-xs">
-                {t("selectCancel")}
-              </Button>
-              <Button size="sm" variant="destructive" onClick={() => void deleteSelectedUsers()} disabled={userSelected.size === 0} className="h-7 px-2.5 text-xs">
-                {t("deleteSelected", { count: userSelected.size })}
-              </Button>
-            </div>
-          </div>
-        </div>
-        {users.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("noUsers")}</p>
-        ) : (
-          <ul className="space-y-1.5">
-            {users.map((u) => {
-              const isUserSelected = userSelected.has(u.id);
-              return (
-              <li
-                key={u.id}
-                onClick={userSelectMode ? () => toggleUserSelect(u.id) : undefined}
-                style={{ gap: userSelectMode ? "0.75rem" : "0px" }}
-                className={cn(
-                  "flex items-center rounded-lg px-3 py-2.5 bg-muted/40",
-                  "transition-[gap,background-color,box-shadow] duration-200",
-                  userSelectMode && "cursor-pointer",
-                  userSelectMode && isUserSelected && "bg-primary/5 ring-1 ring-primary/20"
-                )}
-              >
-                {/* Checkbox — always rendered, width animates */}
-                <div
-                  style={{ width: userSelectMode ? "1rem" : "0px", transition: "width 200ms ease-out" }}
-                  className="shrink-0 overflow-hidden"
-                >
-                  <div className={cn(
-                    "size-4 rounded border-2 flex items-center justify-center transition-colors duration-150",
-                    isUserSelected ? "bg-ring border-ring" : "border-border"
-                  )}>
-                    {isUserSelected && <Check className="size-2.5 text-white animate-in zoom-in-50 duration-100" />}
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium truncate">{u.name ?? u.email}</span>
-                    {u.role === "admin" && (
-                      <ShieldCheck className="size-3.5 text-primary shrink-0" />
-                    )}
-                    <StatusBadge status={u.status} />
-                    {u.dailyLimit > 0 && (
-                      <span className={cn(
-                        "text-[0.65rem] px-1.5 py-0.5 rounded font-medium",
-                        u.todayCount >= u.dailyLimit
-                          ? "bg-destructive/15 text-destructive"
-                          : u.todayCount >= Math.ceil(u.dailyLimit * 0.8)
-                          ? "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400"
-                          : "bg-muted text-muted-foreground"
-                      )}>
-                        {u.todayCount}/{u.dailyLimit}
-                      </span>
-                    )}
-                  </div>
-                  {u.dailyLimit > 0 && (
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={cn(
-                            "h-full rounded-full transition-[width]",
-                            u.todayCount >= u.dailyLimit ? "bg-destructive"
-                              : u.todayCount >= Math.ceil(u.dailyLimit * 0.8) ? "bg-yellow-500"
-                              : "bg-primary"
-                          )}
-                          style={{ width: `${Math.min(100, (u.todayCount / u.dailyLimit) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{u.email}</p>
-                </div>
-                <div className={cn(
-                  "flex items-center gap-1 shrink-0 transition-opacity duration-150",
-                  userSelectMode ? "opacity-0 pointer-events-none" : "opacity-100"
-                )}>
-                  {u.status === "pending" && (
-                    <Button size="icon-sm" variant="ghost" onClick={() => updateUserStatus(u.id, "approved")} disabled={!!loading[`user-${u.id}-approved`]} title={t("approve")}>
-                      {loading[`user-${u.id}-approved`] ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle className="size-3.5 text-green-500" />}
-                    </Button>
-                  )}
-                  {u.status === "approved" && (
-                    <Button size="icon-sm" variant="ghost" onClick={() => updateUserStatus(u.id, "blocked")} disabled={!!loading[`user-${u.id}-blocked`]} title={t("titleBlock")}>
-                      {loading[`user-${u.id}-blocked`] ? <Loader2 className="size-3.5 animate-spin" /> : <XCircle className="size-3.5 text-muted-foreground hover:text-destructive" />}
-                    </Button>
-                  )}
-                  {u.status === "blocked" && (
-                    <Button size="icon-sm" variant="ghost" onClick={() => updateUserStatus(u.id, "approved")} disabled={!!loading[`user-${u.id}-approved`]} title={t("titleUnblock")}>
-                      {loading[`user-${u.id}-approved`] ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle className="size-3.5 text-muted-foreground hover:text-green-500" />}
-                    </Button>
-                  )}
-                  <Button size="icon-sm" variant="ghost" onClick={(e) => { e.stopPropagation(); void deleteUser(u.id); }} disabled={!!loading[`user-delete-${u.id}`]} title={t("titleDelete")}>
-                    {loading[`user-delete-${u.id}`] ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5 text-muted-foreground hover:text-destructive" />}
-                  </Button>
-                </div>
-              </li>
-              );
-            })}
-          </ul>
+        {activeTab === "users" && (
+          <AdminUsersTab
+            users={users}
+            setUsers={setUsers}
+            setStats={setStats}
+            askConfirm={askConfirm}
+          />
         )}
-      </section>}
-
-      {/* İstatistikler */}
-      {activeTab === "downloads" && (stats.totalDownloadedBytes > 0 || stats.platformStats.length > 0) && (
-        <section className="rounded-xl border border-border bg-card p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-              <BarChart2 className="size-3.5" />
-              {t("statsSection")}
-            </h2>
-            <div className="flex items-center gap-1">
-              {(["7d", "30d", "all"] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => void changePeriod(p)}
-                  className={cn(
-                    "text-[0.65rem] px-2 py-0.5 rounded font-medium transition-colors",
-                    statsPeriod === p
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  )}
-                >
-                  {p === "7d" ? t("period7d") : p === "30d" ? t("period30d") : t("periodAll")}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{t("totalDownloaded")}</span>
-              <span className="font-medium">{fmtBytes(stats.totalDownloadedBytes)}</span>
-            </div>
-            {stats.platformStats.length > 0 && (
-              <div className="space-y-1.5 pt-1">
-                {stats.platformStats.map((p) => (
-                  <div key={p.domain} className="flex items-center gap-2 text-xs">
-                    <span className="text-muted-foreground w-36 truncate">{p.domain}</span>
-                    <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full"
-                        style={{
-                          width: `${Math.round((p.count / (stats.platformStats[0]?.count || 1)) * 100)}%`,
-                        }}
-                      />
-                    </div>
-                    <span className="text-muted-foreground w-8 text-right">{p.count}</span>
-                    <span className="text-muted-foreground w-16 text-right">{fmtBytes(p.bytes)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* İndirmeler */}
-      {activeTab === "downloads" && <section className="rounded-xl border border-border bg-card p-5 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 shrink-0">
-            <Download className="size-3.5" />
-            {t("downloadsSection")} ({dlList.length})
-          </h2>
-          <div className="relative flex items-center gap-1.5 shrink-0">
-            {/* Normal mode buttons */}
-            <div className={cn(
-              "flex items-center gap-1.5 transition-all duration-200",
-              selectMode ? "opacity-0 pointer-events-none scale-95" : "opacity-100 scale-100"
-            )}>
-              <Button size="sm" variant="ghost" onClick={() => setSelectMode(true)} className="h-7 px-2.5 text-xs">
-                {t("selectMode")}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => void clearAll()} className="h-7 px-2.5 text-xs text-muted-foreground hover:text-destructive">
-                {t("clearAll")}
-              </Button>
-            </div>
-            {/* Select mode buttons */}
-            <div className={cn(
-              "absolute right-0 flex items-center gap-1.5 transition-all duration-200",
-              selectMode ? "opacity-100 scale-100" : "opacity-0 pointer-events-none scale-95"
-            )}>
-              <Button size="sm" variant="ghost" onClick={exitSelectMode} className="h-7 px-2.5 text-xs">
-                {t("selectCancel")}
-              </Button>
-              <Button size="sm" variant="destructive" onClick={() => void deleteSelected()} disabled={selected.size === 0} className="h-7 px-2.5 text-xs">
-                {t("deleteSelected", { count: selected.size })}
-              </Button>
-            </div>
-          </div>
-        </div>
-        {dlList.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("noDownloads")}</p>
-        ) : (
-          <>
-            <ul className="space-y-1.5">
-              {dlList.slice(0, visibleCount).map((dl, i) => {
-                const isActive = dl.status === "downloading" || dl.status === "pending";
-                const canDelete = dl.status !== "expired";
-                const canDownload = dl.status === "completed" && !!dl.token &&
-                  dl.expiresAt && new Date(dl.expiresAt) > new Date();
-                const isSelected = selected.has(dl.id);
-                const isNew = i >= prevVisibleRef.current;
-                return (
-                  <li
-                    key={dl.id}
-                    onClick={selectMode ? () => toggleSelect(dl.id) : undefined}
-                    style={{
-                      gap: selectMode ? "0.75rem" : "0px",
-                      ...(isNew ? { animationDelay: `${(i - prevVisibleRef.current) * 40}ms` } : {}),
-                    }}
-                    className={cn(
-                      "flex items-center rounded-lg px-3 py-2.5 bg-muted/40 text-sm",
-                      "transition-[gap,background-color,box-shadow] duration-200",
-                      isNew && "animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:backwards]",
-                      selectMode && "cursor-pointer",
-                      selectMode && isSelected && "bg-primary/5 ring-1 ring-primary/20"
-                    )}
-                  >
-                    {/* Checkbox — always rendered, width animates to avoid snap */}
-                    <div
-                      style={{ width: selectMode ? "1rem" : "0px", transition: "width 200ms ease-out" }}
-                      className="shrink-0 overflow-hidden"
-                    >
-                      <div
-                        className={cn(
-                          "size-4 rounded border-2 flex items-center justify-center transition-colors duration-150",
-                          isSelected ? "bg-ring border-ring" : "border-border"
-                        )}
-                      >
-                        {isSelected && <Check className="size-2.5 text-white animate-in zoom-in-50 duration-100" />}
-                      </div>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <a
-                          href={dl.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => selectMode && e.preventDefault()}
-                          className="text-[0.8125rem] font-medium truncate hover:underline"
-                        >
-                          {dl.title ?? hostOf(dl.url)}
-                        </a>
-                        <StatusBadge status={dl.status} />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
-                        <span>{dl.userEmail ?? dl.userId.slice(0, 8)}</span>
-                        <span className="opacity-40">·</span>
-                        <span>{formatLabel(dl.format)}</span>
-                        {dl.fileSize && (
-                          <>
-                            <span className="opacity-40">·</span>
-                            <span>{fmtBytes(dl.fileSize)}</span>
-                          </>
-                        )}
-                        <span className="opacity-40">·</span>
-                        {(() => { const { display, full } = fmtDownloadTime(dl.createdAt, t); return <span title={full} className="cursor-default">{display}</span>; })()}
-                      </p>
-                      {(dl.width || dl.duration || dl.videoCodec) && (
-                        <p className="text-xs text-muted-foreground/70 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                          {dl.width && dl.height && <span>{dl.width}×{dl.height}</span>}
-                          {dl.duration && (
-                            <>
-                              {(dl.width || dl.height) && <span className="opacity-40">·</span>}
-                              <span>{fmtDuration(dl.duration)}</span>
-                            </>
-                          )}
-                          {dl.videoCodec && (
-                            <>
-                              {(dl.width || dl.duration) && <span className="opacity-40">·</span>}
-                              <span>{dl.videoCodec.toUpperCase()}</span>
-                            </>
-                          )}
-                          {dl.audioCodec && (
-                            <>
-                              <span className="opacity-40">·</span>
-                              <span>{dl.audioCodec.toUpperCase()}</span>
-                            </>
-                          )}
-                        </p>
-                      )}
-                      {dl.status === "error" && dl.errorMessage && (
-                        <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                          <AlertCircle className="size-3 shrink-0" />
-                          {dl.errorMessage.slice(0, 80)}
-                        </p>
-                      )}
-                    </div>
-                    <div
-                      className={cn(
-                        "shrink-0 flex items-center gap-1 transition-opacity duration-150",
-                        selectMode ? "opacity-0 pointer-events-none" : "opacity-100"
-                      )}
-                    >
-                      {isActive && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground mr-1">
-                          <Loader2 className="size-3.5 animate-spin" />
-                        </span>
-                      )}
-                      {canDownload && (
-                        <a href={`/api/downloads/${dl.id}/file?token=${dl.token}`}>
-                          <Button size="icon-sm" variant="ghost" title={t("titleDownload")}>
-                            <Download className="size-3.5 text-muted-foreground hover:text-primary" />
-                          </Button>
-                        </a>
-                      )}
-                      {canDelete && (
-                        <Button
-                          size="icon-sm"
-                          variant="ghost"
-                          onClick={(e) => { e.stopPropagation(); void deleteDownload(dl.id); }}
-                          disabled={!!loading[`dl-delete-${dl.id}`]}
-                          title={isActive ? t("titleCancel") : t("titleDelete")}
-                        >
-                          {loading[`dl-delete-${dl.id}`] ? (
-                            <Loader2 className="size-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-3.5 text-muted-foreground hover:text-destructive" />
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-            {dlList.length > visibleCount && (
-              <button
-                onClick={() => { prevVisibleRef.current = visibleCount; setVisibleCount((c) => c + PAGE_SIZE); }}
-                className="w-full text-xs text-muted-foreground hover:text-foreground py-2 border border-border/60 rounded-lg hover:bg-muted/40 transition-colors"
-              >
-                {t("loadMore", { count: dlList.length - visibleCount })}
-              </button>
-            )}
-          </>
+        {activeTab === "downloads" && (
+          <AdminDownloadsTab
+            dlList={dlList}
+            setDlList={setDlList}
+            stats={stats}
+            statsPeriod={statsPeriod}
+            changePeriod={changePeriod}
+            askConfirm={askConfirm}
+          />
         )}
-      </section>}
-
-      {/* Ayarlar */}
-      {activeTab === "settings" && <section className="rounded-xl border border-border bg-card p-5 space-y-4 animate-in fade-in-0 duration-200">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-          <Settings className="size-3.5" />
-          {t("settingsSection")}
-        </h2>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
-              {t("dailyLimitLabel")}
-            </label>
-            <Input
-              type="number"
-              min="0"
-              value={settingsForm.daily_download_limit}
-              onChange={(e) =>
-                setSettingsForm((prev) => ({ ...prev, daily_download_limit: e.target.value }))
-              }
-              className="h-8 w-32 text-sm"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
-              {t("whitelistLabel")}
-            </label>
-            <Input
-              placeholder="youtube.com, twitter.com, tiktok.com"
-              value={settingsForm.whitelist_domains}
-              onChange={(e) =>
-                setSettingsForm((prev) => ({ ...prev, whitelist_domains: e.target.value }))
-              }
-              className="h-8 text-sm"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
-              {t("expiryHoursLabel")}
-            </label>
-            <Input
-              type="number"
-              min="1"
-              value={settingsForm.download_expiry_hours}
-              onChange={(e) =>
-                setSettingsForm((prev) => ({ ...prev, download_expiry_hours: e.target.value }))
-              }
-              className="h-8 w-32 text-sm"
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <Button size="sm" onClick={saveSettings} disabled={settingsSaving}>
-              {settingsSaving ? <Loader2 className="size-3.5 animate-spin" /> : t("save")}
-            </Button>
-            {settingsSaved && (
-              <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                <CheckCircle className="size-3.5" />
-                {t("saved")}
-              </span>
-            )}
-          </div>
-        </div>
-      </section>}
+        {activeTab === "settings" && (
+          <AdminSettingsTab initialSettings={initialSettings} />
+        )}
       </div>
     </div>
   );
@@ -992,22 +241,15 @@ function StatCard({
   highlight?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "rounded-xl border p-4 space-y-2",
-        highlight ? "border-yellow-500/40 bg-yellow-500/5" : "border-border bg-card"
-      )}
-    >
+    <div className={cn(
+      "rounded-xl border p-4 space-y-2",
+      highlight ? "border-yellow-500/40 bg-yellow-500/5" : "border-border bg-card"
+    )}>
       <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
         {icon}
         {label}
       </div>
-      <p
-        className={cn(
-          "text-2xl font-bold tabular-nums",
-          highlight && "text-yellow-600 dark:text-yellow-400"
-        )}
-      >
+      <p className={cn("text-2xl font-bold tabular-nums", highlight && "text-yellow-600 dark:text-yellow-400")}>
         {value}
       </p>
     </div>
