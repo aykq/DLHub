@@ -20,7 +20,7 @@ interface DownloadCompleteNotificationData {
 
 const PROVIDER_LABELS: Record<string, string> = {
   google: "Google OAuth",
-  resend: "E-posta (Magic Link)",
+  resend: "Email (Magic Link)",
 };
 
 async function sendWebhook(body: object): Promise<void> {
@@ -49,12 +49,12 @@ export async function sendSignInDiscordNotification(data: NewUserNotificationDat
     await sendWebhook({
       embeds: [
         {
-          title: "🔔 Yeni Kullanıcı Kayıt İsteği",
+          title: "🔔 New User Registration Request",
           color: 0xe11d48,
-          description: `[✅ Onay sayfasını aç →](${approvalUrl})`,
+          description: `[✅ Open approval page →](${approvalUrl})`,
           fields: [
-            { name: "👤 İsim", value: data.name ?? "—", inline: true },
-            { name: "📧 E-posta", value: data.email ?? "—", inline: true },
+            { name: "👤 Name", value: data.name ?? "—", inline: true },
+            { name: "📧 Email", value: data.email ?? "—", inline: true },
             { name: "🔑 Provider", value: providerLabel, inline: true },
           ],
           ...(data.image ? { thumbnail: { url: data.image } } : {}),
@@ -67,11 +67,11 @@ export async function sendSignInDiscordNotification(data: NewUserNotificationDat
     await sendWebhook({
       embeds: [
         {
-          title: "🔑 Kullanıcı Giriş Yaptı",
+          title: "🔑 User Signed In",
           color: 0x2563eb,
           fields: [
-            { name: "👤 İsim", value: data.name ?? "—", inline: true },
-            { name: "📧 E-posta", value: data.email ?? "—", inline: true },
+            { name: "👤 Name", value: data.name ?? "—", inline: true },
+            { name: "📧 Email", value: data.email ?? "—", inline: true },
             { name: "🔑 Provider", value: providerLabel, inline: true },
           ],
           ...(data.image ? { thumbnail: { url: data.image } } : {}),
@@ -89,13 +89,13 @@ export async function sendDownloadCompleteDiscordNotification(data: DownloadComp
   await sendWebhook({
     embeds: [
       {
-        title: "✅ İndirme Tamamlandı",
+        title: "✅ Download Complete",
         color: 0x16a34a,
         fields: [
-          { name: "👤 Kullanıcı", value: data.userName ?? "—", inline: true },
+          { name: "👤 User", value: data.userName ?? "—", inline: true },
           { name: "📁 Format", value: data.format, inline: true },
-          { name: "📦 Boyut", value: fileSizeMB, inline: true },
-          { name: "🎬 Başlık", value: data.title ?? "—", inline: false },
+          { name: "📦 Size", value: fileSizeMB, inline: true },
+          { name: "🎬 Title", value: data.title ?? "—", inline: false },
         ],
         footer: { text: "DLHub Bot" },
         timestamp: new Date().toISOString(),

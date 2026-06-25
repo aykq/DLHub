@@ -80,7 +80,7 @@ export function NotificationBell() {
           if (!open && unreadCount > 0) markAllRead();
         }}
         className="relative flex items-center justify-center w-8 h-8 rounded-md hover:bg-muted transition-colors cursor-pointer"
-        aria-label="Bildirimler"
+        aria-label="Notifications"
       >
         <Bell className="size-4" />
         {unreadCount > 0 && (
