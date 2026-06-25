@@ -36,9 +36,22 @@ export function AdminDownloadsTab({ dlList, setDlList, stats, statsPeriod, chang
   const prevVisibleRef = useRef(PAGE_SIZE);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
 
   function setItemLoading(key: string, val: boolean) {
     setLoading((prev) => ({ ...prev, [key]: val }));
+  }
+
+  function animateRemove(ids: string[], afterMs = 220) {
+    setRemovingIds((prev) => new Set([...prev, ...ids]));
+    setTimeout(() => {
+      setDlList((prev) => prev.filter((dl) => !ids.includes(dl.id)));
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.delete(id));
+        return next;
+      });
+    }, afterMs);
   }
 
   function toggleSelect(id: string) {
@@ -63,14 +76,19 @@ export function AdminDownloadsTab({ dlList, setDlList, stats, statsPeriod, chang
       variant: "destructive",
     }))) return;
     const ids = Array.from(selected);
-    const res = await fetch("/api/admin/downloads", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids }),
-    });
-    if (res.ok) {
-      setDlList((prev) => prev.map((dl) => ids.includes(dl.id) ? { ...dl, status: "expired" } : dl));
-      exitSelectMode();
+    setItemLoading("bulk-delete", true);
+    try {
+      const res = await fetch("/api/admin/downloads", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      if (res.ok) {
+        exitSelectMode();
+        animateRemove(ids);
+      }
+    } finally {
+      setItemLoading("bulk-delete", false);
     }
   }
 
@@ -91,8 +109,8 @@ export function AdminDownloadsTab({ dlList, setDlList, stats, statsPeriod, chang
       body: JSON.stringify({ ids: inactiveIds }),
     });
     if (res.ok) {
-      setDlList((prev) => prev.filter((dl) => dl.status === "downloading" || dl.status === "pending"));
-      setVisibleCount(PAGE_SIZE);
+      animateRemove(inactiveIds);
+      setTimeout(() => setVisibleCount(PAGE_SIZE), 220);
     }
   }
 
@@ -108,7 +126,7 @@ export function AdminDownloadsTab({ dlList, setDlList, stats, statsPeriod, chang
     try {
       const res = await fetch(`/api/admin/downloads/${dlId}`, { method: "DELETE" });
       if (res.ok) {
-        setDlList((prev) => prev.map((dl) => (dl.id === dlId ? { ...dl, status: "expired" } : dl)));
+        animateRemove([dlId]);
       }
     } finally {
       setItemLoading(key, false);
@@ -192,7 +210,8 @@ export function AdminDownloadsTab({ dlList, setDlList, stats, statsPeriod, chang
               <Button size="sm" variant="ghost" onClick={exitSelectMode} className="h-7 px-2.5 text-xs">
                 {t("selectCancel")}
               </Button>
-              <Button size="sm" variant="destructive" onClick={() => void deleteSelected()} disabled={selected.size === 0} className="h-7 px-2.5 text-xs">
+              <Button size="sm" variant="destructive" onClick={() => void deleteSelected()} disabled={selected.size === 0 || !!loading["bulk-delete"]} className="h-7 px-2.5 text-xs gap-1.5">
+                {loading["bulk-delete"] && <Loader2 className="size-3 animate-spin" />}
                 {t("deleteSelected", { count: selected.size })}
               </Button>
             </div>
@@ -210,19 +229,21 @@ export function AdminDownloadsTab({ dlList, setDlList, stats, statsPeriod, chang
                   dl.expiresAt && new Date(dl.expiresAt) > new Date();
                 const isSelected = selected.has(dl.id);
                 const isNew = i >= prevVisibleRef.current;
+                const isRemoving = removingIds.has(dl.id);
                 return (
                   <li
                     key={dl.id}
-                    onClick={selectMode ? () => toggleSelect(dl.id) : undefined}
+                    onClick={selectMode && !isRemoving ? () => toggleSelect(dl.id) : undefined}
                     style={{
                       gap: selectMode ? "0.75rem" : "0px",
-                      ...(isNew ? { animationDelay: `${(i - prevVisibleRef.current) * 40}ms` } : {}),
+                      ...(isNew && !isRemoving ? { animationDelay: `${(i - prevVisibleRef.current) * 40}ms` } : {}),
                     }}
                     className={cn(
                       "flex items-center rounded-lg px-3 py-2.5 bg-muted/40 text-sm",
                       "transition-[gap,background-color,box-shadow] duration-200",
-                      isNew && "animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:backwards]",
-                      selectMode && "cursor-pointer",
+                      isNew && !isRemoving && "animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:backwards]",
+                      isRemoving && "animate-out fade-out-0 zoom-out-95 duration-200 pointer-events-none [animation-fill-mode:forwards]",
+                      selectMode && !isRemoving && "cursor-pointer",
                       selectMode && isSelected && "bg-primary/5 ring-1 ring-primary/20"
                     )}
                   >
