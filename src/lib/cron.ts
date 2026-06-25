@@ -1,8 +1,11 @@
 import cron from "node-cron";
-import { lt, eq, or, and, lte } from "drizzle-orm";
+import { eq, or, and, lte } from "drizzle-orm";
 import { db } from "@/db";
 import { downloads } from "@/db/schema";
-import { unlink } from "fs/promises";
+import { readdir, unlink } from "fs/promises";
+import path from "path";
+
+const DOWNLOADS_PATH = process.env.DOWNLOADS_PATH ?? "/downloads";
 
 const STUCK_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 saat
 
@@ -56,11 +59,21 @@ export async function runCleanup(): Promise<CleanupResult> {
       columns: { id: true },
     });
 
+    let allFiles: string[] = [];
+    try { allFiles = await readdir(DOWNLOADS_PATH); } catch { /* ignore */ }
+
     for (const download of stuck) {
       await db
         .update(downloads)
-        .set({ status: "error", errorMessage: "Zaman aşımı: indirme 2 saatten fazla sürdü" })
+        .set({ status: "error", filePath: null, errorMessage: "Timed out: download exceeded 2 hours" })
         .where(eq(downloads.id, download.id));
+
+      for (const file of allFiles) {
+        if (file.startsWith(`${download.id}_`)) {
+          await unlink(path.join(DOWNLOADS_PATH, file)).catch(() => {});
+        }
+      }
+
       result.stuckReset++;
     }
   } catch (err) {

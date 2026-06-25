@@ -5,6 +5,18 @@ import { eq } from "drizzle-orm";
 import { getVideoInfo } from "@/lib/yt-dlp";
 import { type NextRequest } from "next/server";
 
+const rateLimitMap = new Map<string, number[]>();
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX = 8;
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const prev = (rateLimitMap.get(userId) ?? []).filter(t => now - t < RATE_WINDOW_MS);
+  if (prev.length >= RATE_MAX) return false;
+  rateLimitMap.set(userId, [...prev, now]);
+  return true;
+}
+
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -15,6 +27,10 @@ export async function GET(req: NextRequest) {
   });
   if (dbUser?.status !== "approved") {
     return Response.json({ error: "Account not approved" }, { status: 403 });
+  }
+
+  if (!checkRateLimit(session.user.id)) {
+    return Response.json({ error: "Too many requests. Please wait a moment." }, { status: 429 });
   }
 
   const url = req.nextUrl.searchParams.get("url");
