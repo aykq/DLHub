@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CheckCircle, Loader2, Settings } from "lucide-react";
+import { CheckCircle, Loader2, Settings, Cookie } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { AdminSettings } from "./AdminDashboard";
 
@@ -67,6 +67,21 @@ export function AdminSettingsTab({ initialSettings }: Props) {
             onChange={(e) => setForm((prev) => ({ ...prev, download_expiry_hours: e.target.value }))}
             className="h-8 w-32 text-sm"
           />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+            <Cookie className="size-3" />
+            VK Cookies File
+          </label>
+          <Input
+            placeholder="/data/cookies/vk.txt"
+            value={form.vk_cookies_path}
+            onChange={(e) => setForm((prev) => ({ ...prev, vk_cookies_path: e.target.value }))}
+            className="h-8 text-sm font-mono"
+          />
+          <p className="text-[0.7rem] text-muted-foreground/70">
+            Netscape format cookie file path on the server. Required for private VK videos.
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <Button size="sm" onClick={saveSettings} disabled={saving}>

@@ -8,23 +8,22 @@ const DEFAULTS: Record<string, string> = {
   daily_download_limit: "10",
   whitelist_domains: "",
   download_expiry_hours: "24",
+  vk_cookies_path: "",
 };
+
+const SETTING_KEYS = ["daily_download_limit", "whitelist_domains", "download_expiry_hours", "vk_cookies_path"];
 
 export async function GET() {
   const adminId = await requireAdmin();
   if (!adminId) return Response.json({ error: "Forbidden" }, { status: 403 });
 
-  const [limitRow, whitelistRow, expiryRow] = await Promise.all([
-    db.query.settings.findFirst({ where: eq(settings.key, "daily_download_limit") }),
-    db.query.settings.findFirst({ where: eq(settings.key, "whitelist_domains") }),
-    db.query.settings.findFirst({ where: eq(settings.key, "download_expiry_hours") }),
-  ]);
+  const rows = await Promise.all(
+    SETTING_KEYS.map((key) => db.query.settings.findFirst({ where: eq(settings.key, key) }))
+  );
 
-  return Response.json({
-    daily_download_limit: limitRow?.value ?? DEFAULTS.daily_download_limit,
-    whitelist_domains: whitelistRow?.value ?? DEFAULTS.whitelist_domains,
-    download_expiry_hours: expiryRow?.value ?? DEFAULTS.download_expiry_hours,
-  });
+  return Response.json(
+    Object.fromEntries(SETTING_KEYS.map((key, i) => [key, rows[i]?.value ?? DEFAULTS[key]]))
+  );
 }
 
 export async function PATCH(req: NextRequest) {
@@ -32,7 +31,7 @@ export async function PATCH(req: NextRequest) {
   if (!adminId) return Response.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json() as Record<string, string>;
-  const allowed = ["daily_download_limit", "whitelist_domains", "download_expiry_hours"];
+  const allowed = SETTING_KEYS;
 
   for (const key of allowed) {
     if (key in body) {

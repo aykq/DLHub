@@ -116,7 +116,8 @@ export async function POST(req: NextRequest) {
     .values({ userId: session.user.id, url, format: formatId, status: "pending" })
     .returning({ id: downloads.id });
 
-  startDownload(record.id, url, quality, container, vcodec, acodec);
+  const vkCookiesPath = await getSetting("vk_cookies_path");
+  startDownload(record.id, url, quality, container, vcodec, acodec, vkCookiesPath || undefined);
 
   await db
     .update(downloads)

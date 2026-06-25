@@ -57,6 +57,7 @@ export interface AdminSettings {
   daily_download_limit: string;
   whitelist_domains: string;
   download_expiry_hours: string;
+  vk_cookies_path: string;
 }
 
 interface Props {

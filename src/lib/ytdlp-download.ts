@@ -159,7 +159,8 @@ export function startDownload(
   quality: string,
   ext: string,
   vcodec?: string,
-  acodec?: string
+  acodec?: string,
+  cookiesPath?: string,
 ): void {
   const entry: DownloadEntry = {
     status: "pending",
@@ -181,6 +182,7 @@ export function startDownload(
   const outputTemplate = path.join(DOWNLOADS_PATH, `${downloadId}_%(title)s.%(ext)s`);
   const formatArgs = buildFormatArgs(quality, ext, vcodec, acodec);
 
+  const isVk = url.includes("vk.com") || url.includes("vk.ru");
   const args = [
     ...formatArgs,
     "--output", outputTemplate,
@@ -188,6 +190,7 @@ export function startDownload(
     "--no-playlist",
     "--socket-timeout", "30",
     "--js-runtimes", "node",
+    ...(isVk && cookiesPath ? ["--cookies", cookiesPath] : []),
     url,
   ];
 
