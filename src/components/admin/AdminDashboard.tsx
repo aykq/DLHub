@@ -183,7 +183,7 @@ export function AdminDashboard({ initialStats, initialUsers, initialDownloads, i
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [statsPeriod, setStatsPeriod] = useState<"7d" | "30d" | "all">("all");
   const [activeTab, setActiveTab] = useState<"users" | "downloads" | "settings">("users");
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 7;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
