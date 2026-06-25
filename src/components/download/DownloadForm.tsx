@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Download, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Download, Loader2, CheckCircle, AlertCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SupportedSites } from "./SupportedSites";
 import { useTranslations } from "next-intl";
@@ -424,9 +424,23 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
       {/* Progress */}
       {phase.type === "downloading" && (
         <div className="space-y-3">
-          {phase.title && (
-            <p className="font-heading text-sm font-semibold truncate">{phase.title}</p>
-          )}
+          <div className="flex items-center gap-2">
+            <p className="font-heading text-sm font-semibold truncate flex-1">
+              {phase.title ?? ""}
+            </p>
+            <button
+              onClick={handleCancel}
+              disabled={isCancelling}
+              aria-label={t("cancel")}
+              className="shrink-0 rounded-md p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {isCancelling ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <X className="size-4" />
+              )}
+            </button>
+          </div>
           <div className="space-y-1.5">
             <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
               <div
@@ -436,27 +450,14 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
             </div>
             <div className="flex justify-between items-center text-xs text-muted-foreground">
               <span className="font-mono">{phase.percent.toFixed(1)}%</span>
-              <div className="flex items-center gap-3">
-                <span className="font-mono">
-                  {[
-                    phase.speed,
-                    phase.eta ? t("etaLeft", { eta: phase.eta }) : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" — ")}
-                </span>
-                <button
-                  onClick={handleCancel}
-                  disabled={isCancelling}
-                  className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {isCancelling ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    t("cancel")
-                  )}
-                </button>
-              </div>
+              <span className="font-mono">
+                {[
+                  phase.speed,
+                  phase.eta ? t("etaLeft", { eta: phase.eta }) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" — ")}
+              </span>
             </div>
           </div>
         </div>
