@@ -74,7 +74,7 @@ function hostOf(url: string): string {
   catch { return url.slice(0, 40); }
 }
 
-const STATUS_FILTER_KEYS = ["all", "completed", "error", "expired"] as const;
+const STATUS_FILTER_KEYS = ["all", "completed", "error", "cancelled", "expired"] as const;
 
 type StatusFilter = (typeof STATUS_FILTER_KEYS)[number];
 
@@ -254,6 +254,11 @@ export function DownloadHistory({ initialDownloads }: Props) {
                   <span className="flex items-center gap-1 text-xs text-destructive">
                     <AlertCircle className="size-3.5" />
                     {t("error")}
+                  </span>
+                ) : dl.status === "cancelled" ? (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground/60">
+                    <X className="size-3.5" />
+                    {t("cancelled")}
                   </span>
                 ) : (
                   <span className="flex items-center gap-1 text-xs text-muted-foreground/60">
