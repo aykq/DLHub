@@ -80,12 +80,6 @@ function parseLine(downloadId: string, line: string): void {
   const entry = progressStore.get(downloadId);
   if (!entry) return;
 
-  // --print "%(title)s" output: plain line before any [download] lines
-  if (!line.startsWith("[") && !entry.title && line.trim()) {
-    entry.title = line.trim();
-    return;
-  }
-
   // [download] Destination: /downloads/abc_Title.f399.mp4
   if (line.includes("[download]") && line.includes("Destination:")) {
     const m = /Destination:\s+(.+)/.exec(line);
@@ -190,7 +184,6 @@ export function startDownload(
   const args = [
     ...formatArgs,
     "--output", outputTemplate,
-    "--print", "%(title)s",
     "--progress", "--newline",
     "--no-playlist",
     "--socket-timeout", "30",
