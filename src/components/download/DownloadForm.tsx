@@ -242,15 +242,16 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
         <div className="space-y-3">
         <div className="flex gap-2">
           <Input
-            placeholder=""
+            placeholder="youtube.com, instagram.com, tiktok.com…"
             value={url}
             onChange={(e) => {
               setUrl(e.target.value);
               if (phase.type === "ready" || phase.type === "error") setPhase({ type: "idle" });
             }}
             onKeyDown={(e) => { if (e.key === "Enter") handleFetchFormats(); }}
+            className="h-12 text-sm"
           />
-          <Button onClick={handleFetchFormats} disabled={!url.trim() || isFetching}>
+          <Button onClick={handleFetchFormats} disabled={!url.trim() || isFetching} className="h-12 px-5">
             {t("fetch")}
           </Button>
         </div>
@@ -260,9 +261,12 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
 
       {/* Format yükleniyor */}
       {phase.type === "fetching" && (
-        <div className="flex items-center gap-3 py-3 text-muted-foreground">
+        <div className="flex items-center gap-3 py-2 text-muted-foreground">
           <Loader2 className="size-4 animate-spin shrink-0" />
-          <span className="text-sm">{t("loading")}</span>
+          <div className="min-w-0 flex-1">
+            <span className="text-sm">{t("loading")}</span>
+            <p className="text-xs text-muted-foreground/60 truncate mt-0.5 font-mono">{url}</p>
+          </div>
         </div>
       )}
 
@@ -278,9 +282,9 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
                 className="w-24 h-14 object-cover rounded-md shrink-0 bg-muted"
               />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium leading-snug line-clamp-2">{phase.info.title}</p>
+                <p className="font-heading text-sm font-semibold leading-snug line-clamp-2">{phase.info.title}</p>
                 {phase.info.duration && (
-                  <p className="text-xs text-muted-foreground mt-1">{fmtDuration(phase.info.duration)}</p>
+                  <p className="text-xs text-muted-foreground font-mono mt-1">{fmtDuration(phase.info.duration)}</p>
                 )}
               </div>
             </div>
@@ -300,8 +304,8 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
                   className={cn(
                     "rounded-lg border px-3 py-2.5 text-left transition-colors cursor-pointer",
                     isSelected
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background hover:bg-muted"
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-border bg-background hover:border-primary/30 hover:bg-primary/5"
                   )}
                 >
                   <span className="text-sm font-medium block">{fmt.label.split(" — ")[0]}</span>
@@ -311,8 +315,8 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
                         <span
                           key={v.codec}
                           className={cn(
-                            "text-[0.62rem] px-1.5 py-0.5 rounded font-medium",
-                            isSelected ? "bg-white/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+                            "text-[0.62rem] px-1.5 py-0.5 rounded font-mono font-medium",
+                            isSelected ? "bg-background/20 text-primary-foreground" : "bg-muted/80 text-muted-foreground"
                           )}
                         >
                           {v.codec}
@@ -421,19 +425,19 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
       {phase.type === "downloading" && (
         <div className="space-y-3">
           {phase.title && (
-            <p className="text-sm font-medium truncate">{phase.title}</p>
+            <p className="font-heading text-sm font-semibold truncate">{phase.title}</p>
           )}
           <div className="space-y-1.5">
             <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full bg-primary rounded-full transition-[width] duration-500"
+                className="h-full bg-ring rounded-full transition-[width] duration-500"
                 style={{ width: `${Math.max(2, phase.percent)}%` }}
               />
             </div>
             <div className="flex justify-between items-center text-xs text-muted-foreground">
-              <span>{phase.percent.toFixed(1)}%</span>
+              <span className="font-mono">{phase.percent.toFixed(1)}%</span>
               <div className="flex items-center gap-3">
-                <span>
+                <span className="font-mono">
                   {[
                     phase.speed,
                     phase.eta ? `${phase.eta} kaldı` : null,
@@ -461,9 +465,14 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
       {/* Tamamlandı */}
       {phase.type === "completed" && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm">
-            <CheckCircle className="size-4 text-green-500 shrink-0" />
-            <span className="font-medium truncate">{phase.title ?? t("download")}</span>
+          <div className="rounded-lg border border-border/60 bg-muted/30 p-3.5 flex items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 shrink-0">
+              <CheckCircle className="size-5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-heading text-sm font-semibold truncate">{phase.title ?? t("download")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("validFor24h")}</p>
+            </div>
           </div>
           <div className="flex gap-2">
             <a
@@ -473,7 +482,6 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
               <Button className="w-full" size="lg">
                 <Download className="size-4" />
                 {t("downloadFile")}
-                <span className="text-xs opacity-70 ml-1">{t("validFor24h")}</span>
               </Button>
             </a>
             <Button variant="outline" size="lg" onClick={handleReset}>
