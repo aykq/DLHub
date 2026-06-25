@@ -91,14 +91,14 @@ function fmtDownloadTime(dateStr: string, t: TFn): { display: string; full: stri
   const date = new Date(dateStr);
   const diff = Date.now() - date.getTime();
   const m = Math.floor(diff / 60000);
-  const full = date.toLocaleString("tr-TR", {
+  const full = date.toLocaleString(undefined, {
     day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
   if (m < 1) return { display: t("timeNow"), full };
   if (m < 60) return { display: t("timeMin", { count: m }), full };
   const h = Math.floor(m / 60);
   if (h < 24) return { display: t("timeHour", { count: h }), full };
-  const display = date.toLocaleDateString("tr-TR", {
+  const display = date.toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
     ...(date.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}),
