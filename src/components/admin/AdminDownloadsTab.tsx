@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Download, Loader2, Trash2, AlertCircle, BarChart2, Check,
+  Download, Loader2, Trash2, AlertCircle, BarChart2, Check, ListChecks, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
@@ -36,22 +36,9 @@ export function AdminDownloadsTab({ dlList, setDlList, stats, statsPeriod, chang
   const prevVisibleRef = useRef(PAGE_SIZE);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
 
   function setItemLoading(key: string, val: boolean) {
     setLoading((prev) => ({ ...prev, [key]: val }));
-  }
-
-  function animateRemove(ids: string[], afterMs = 220) {
-    setRemovingIds((prev) => new Set([...prev, ...ids]));
-    setTimeout(() => {
-      setDlList((prev) => prev.filter((dl) => !ids.includes(dl.id)));
-      setRemovingIds((prev) => {
-        const next = new Set(prev);
-        ids.forEach((id) => next.delete(id));
-        return next;
-      });
-    }, afterMs);
   }
 
   function toggleSelect(id: string) {
@@ -89,28 +76,6 @@ export function AdminDownloadsTab({ dlList, setDlList, stats, statsPeriod, chang
       }
     } finally {
       setItemLoading("bulk-delete", false);
-    }
-  }
-
-  async function clearAll() {
-    const inactiveIds = dlList
-      .filter((dl) => dl.status !== "downloading" && dl.status !== "pending")
-      .map((dl) => dl.id);
-    if (inactiveIds.length === 0) return;
-    if (!(await askConfirm({
-      message: t("clearAllConfirm"),
-      confirmLabel: t("clearAll"),
-      cancelLabel: t("selectCancel"),
-      variant: "destructive",
-    }))) return;
-    const res = await fetch("/api/admin/downloads", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: inactiveIds }),
-    });
-    if (res.ok) {
-      animateRemove(inactiveIds);
-      setTimeout(() => setVisibleCount(PAGE_SIZE), 220);
     }
   }
 
@@ -191,27 +156,42 @@ export function AdminDownloadsTab({ dlList, setDlList, stats, statsPeriod, chang
             <Download className="size-3.5" />
             {t("downloadsSection")} ({dlList.length})
           </h2>
-          <div className="relative flex items-center gap-1.5 shrink-0">
+          <div className="relative flex items-center shrink-0">
             <div className={cn(
-              "flex items-center gap-1.5 transition-all duration-200",
+              "transition-all duration-200",
               selectMode ? "opacity-0 pointer-events-none scale-95" : "opacity-100 scale-100"
             )}>
-              <Button size="sm" variant="ghost" onClick={() => setSelectMode(true)} className="h-7 px-2.5 text-xs">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectMode(true)}
+                className="h-7 px-2.5 text-xs gap-1.5"
+              >
+                <ListChecks className="size-3.5" />
                 {t("selectMode")}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => void clearAll()} className="h-7 px-2.5 text-xs text-muted-foreground hover:text-destructive">
-                {t("clearAll")}
               </Button>
             </div>
             <div className={cn(
               "absolute right-0 flex items-center gap-1.5 transition-all duration-200",
               selectMode ? "opacity-100 scale-100" : "opacity-0 pointer-events-none scale-95"
             )}>
-              <Button size="sm" variant="ghost" onClick={exitSelectMode} className="h-7 px-2.5 text-xs">
+              <button
+                onClick={exitSelectMode}
+                className="flex items-center gap-1 h-7 px-2 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                <X className="size-3" />
                 {t("selectCancel")}
-              </Button>
-              <Button size="sm" variant="destructive" onClick={() => void deleteSelected()} disabled={selected.size === 0 || !!loading["bulk-delete"]} className="h-7 px-2.5 text-xs gap-1.5">
-                {loading["bulk-delete"] && <Loader2 className="size-3 animate-spin" />}
+              </button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => void deleteSelected()}
+                disabled={selected.size === 0 || !!loading["bulk-delete"]}
+                className="h-7 px-2.5 text-xs gap-1.5"
+              >
+                {loading["bulk-delete"]
+                  ? <Loader2 className="size-3 animate-spin" />
+                  : <Trash2 className="size-3" />}
                 {t("deleteSelected", { count: selected.size })}
               </Button>
             </div>
@@ -229,21 +209,19 @@ export function AdminDownloadsTab({ dlList, setDlList, stats, statsPeriod, chang
                   dl.expiresAt && new Date(dl.expiresAt) > new Date();
                 const isSelected = selected.has(dl.id);
                 const isNew = i >= prevVisibleRef.current;
-                const isRemoving = removingIds.has(dl.id);
                 return (
                   <li
                     key={dl.id}
-                    onClick={selectMode && !isRemoving ? () => toggleSelect(dl.id) : undefined}
+                    onClick={selectMode ? () => toggleSelect(dl.id) : undefined}
                     style={{
                       gap: selectMode ? "0.75rem" : "0px",
-                      ...(isNew && !isRemoving ? { animationDelay: `${(i - prevVisibleRef.current) * 40}ms` } : {}),
+                      ...(isNew ? { animationDelay: `${(i - prevVisibleRef.current) * 40}ms` } : {}),
                     }}
                     className={cn(
                       "flex items-center rounded-lg px-3 py-2.5 bg-muted/40 text-sm",
                       "transition-[gap,background-color,box-shadow] duration-200",
-                      isNew && !isRemoving && "animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:backwards]",
-                      isRemoving && "animate-out fade-out-0 zoom-out-95 duration-200 pointer-events-none [animation-fill-mode:forwards]",
-                      selectMode && !isRemoving && "cursor-pointer",
+                      isNew && "animate-in fade-in-0 slide-in-from-bottom-2 [animation-fill-mode:backwards]",
+                      selectMode && "cursor-pointer",
                       selectMode && isSelected && "bg-primary/5 ring-1 ring-primary/20"
                     )}
                   >
