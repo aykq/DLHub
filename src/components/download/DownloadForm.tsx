@@ -37,6 +37,7 @@ type Phase =
   | { type: "ready"; url: string; info: VideoInfo }
   | { type: "downloading"; downloadId: string; title: string | null; percent: number; speed: string | null; eta: string | null }
   | { type: "completed"; downloadId: string; title: string | null; token: string }
+  | { type: "cancelled" }
   | { type: "error"; message: string };
 
 interface Props {
@@ -67,6 +68,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
   const [selectedVcodec, setSelectedVcodec] = useState<string | null>(null);
   const [selectedAcodec, setSelectedAcodec] = useState<"auto" | "aac" | "opus">("auto");
   const [isStarting, setIsStarting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const esRef = useRef<EventSource | null>(null);
   const titleRef = useRef<string | null>(null);
@@ -206,6 +208,18 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
     }
   }
 
+  async function handleCancel() {
+    if (phase.type !== "downloading" || isCancelling) return;
+    const downloadId = phase.downloadId;
+    setIsCancelling(true);
+    esRef.current?.close();
+    try {
+      await fetch(`/api/downloads/${downloadId}`, { method: "DELETE" });
+    } catch { /* hata sessizce geçilir */ }
+    setIsCancelling(false);
+    setPhase({ type: "cancelled" });
+  }
+
   function handleReset() {
     esRef.current?.close();
     setPhase({ type: "idle" });
@@ -214,6 +228,7 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
     setSelectedVcodec(null);
     setSelectedContainer("mp4");
     setSelectedAcodec("auto");
+    setIsCancelling(false);
   }
 
   return (
@@ -415,16 +430,29 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
                 style={{ width: `${Math.max(2, phase.percent)}%` }}
               />
             </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
+            <div className="flex justify-between items-center text-xs text-muted-foreground">
               <span>{phase.percent.toFixed(1)}%</span>
-              <span>
-                {[
-                  phase.speed,
-                  phase.eta ? `${phase.eta} kaldı` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" — ")}
-              </span>
+              <div className="flex items-center gap-3">
+                <span>
+                  {[
+                    phase.speed,
+                    phase.eta ? `${phase.eta} kaldı` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" — ")}
+                </span>
+                <button
+                  onClick={handleCancel}
+                  disabled={isCancelling}
+                  className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {isCancelling ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    t("cancel")
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -457,6 +485,16 @@ export function DownloadForm({ activeDownloadId, activeDownloadTitle }: Props) {
               {t("iosNote")}
             </p>
           )}
+        </div>
+      )}
+
+      {/* İptal edildi */}
+      {phase.type === "cancelled" && (
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">{t("cancelled")}</p>
+          <Button variant="outline" size="lg" onClick={handleReset} className="w-full">
+            {t("new")}
+          </Button>
         </div>
       )}
 
