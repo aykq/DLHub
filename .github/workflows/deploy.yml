@@ -25,7 +25,13 @@ jobs:
             git pull origin main
 
             echo "==> build app + migrate images"
-            docker compose build app migrate
+            # Built sequentially, not "build app migrate": both Dockerfiles run an
+            # identical `COPY package.json package-lock.json ./` + `RUN npm ci` step,
+            # so BuildKit treats it as the same cache layer. Building app and migrate
+            # in parallel lets two builds hit that layer at once, racing on esbuild's
+            # postinstall (chmod+exec) and failing with ETXTBSY.
+            docker compose build app
+            docker compose build migrate
 
             echo "==> run migrations"
             docker compose --profile migrate run --rm migrate
